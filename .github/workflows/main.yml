@@ -1,0 +1,465 @@
+name: AutoCallManager 1.0.9 - Android + Admin
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: autocallmanager-v1.0.9-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    name: Build AutoCallManager APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.9'
+          cache-disabled: true
+
+      - name: Ensure Android SDK 35 platform + build-tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          test -n "$ANDROID_HOME" || {
+            echo "::error::ANDROID_HOME/ANDROID_SDK_ROOT is not set."
+            exit 1
+          }
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -print -quit 2>/dev/null || true)"
+          fi
+          if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
+            echo "::error::sdkmanager was not found."
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platforms;android-35" "build-tools;35.0.0"
+          test -d "$ANDROID_HOME/platforms/android-35"
+          test -d "$ANDROID_HOME/build-tools/35.0.0"
+          echo "Android SDK 35 ready."
+
+      - name: Locate complete Android + Admin bundle
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          find_complete_root() {
+            local root="$1"
+            if [[ -f "$root/settings.gradle.kts" &&
+                  -f "$root/build.gradle.kts" &&
+                  -f "$root/app/build.gradle.kts" &&
+                  -f "$root/app/src/main/AndroidManifest.xml" ]]; then
+              if [[ -f "$root/admin-server/package.json" &&
+                    -f "$root/admin-server/src/server.js" ]]; then
+                printf '%s\n' "$root"
+                return 0
+              fi
+            fi
+            return 1
+          }
+
+          if ROOT="$(find_complete_root "$GITHUB_WORKSPACE")"; then
+            echo "Using complete project at repository root: $ROOT"
+          else
+            rm -rf .ci/project-bundles
+            mkdir -p .ci/project-bundles
+
+            CANDIDATES=()
+            while IFS= read -r -d '' zip; do
+              LIST="$(unzip -l "$zip" 2>/dev/null || true)"
+              if grep -Eq 'settings\.gradle\.kts$' <<<"$LIST" &&
+                 grep -Eq 'app/build\.gradle\.kts$' <<<"$LIST" &&
+                 grep -Eq 'admin-server/package\.json$' <<<"$LIST" &&
+                 grep -Eq 'admin-server/src/server\.js$' <<<"$LIST"; then
+                CANDIDATES+=("$zip")
+              fi
+            done < <(find "$GITHUB_WORKSPACE" -maxdepth 4 -type f -iname '*.zip' -print0 | sort -z)
+
+            if [[ "${#CANDIDATES[@]}" -eq 0 ]]; then
+              echo "::error::No ZIP containing BOTH the Android project and admin-server was found."
+              find "$GITHUB_WORKSPACE" -maxdepth 4 -type f -print | sort | head -300
+              exit 1
+            fi
+
+            # Prefer the explicitly combined/final bundle, then lint-fixed,
+            # then other valid bundles. This prevents an old partial ZIP from
+            # winning merely because it sorts first.
+            SELECTED=""
+            for pattern in \
+              '*COMPLETE*COMBINED*FINAL*.zip' \
+              '*COMPLETE*LINT*FIXED*.zip' \
+              '*COMPLETE*.zip' \
+              '*.zip'; do
+              for zip in "${CANDIDATES[@]}"; do
+                name="$(basename "$zip")"
+                if [[ "$name" == $pattern ]]; then
+                  SELECTED="$zip"
+                  break 2
+                fi
+              done
+            done
+
+            echo "Selected complete bundle: $SELECTED"
+            rm -rf .ci/project-bundles/android-admin
+            mkdir -p .ci/project-bundles/android-admin
+            unzip -q "$SELECTED" -d .ci/project-bundles/android-admin
+
+            ROOT="$(find "$GITHUB_WORKSPACE/.ci/project-bundles/android-admin" \ -type f -path '*/settings.gradle.kts' -print -quit | xargs -r dirname)"
+
+            if [[ -z "$ROOT" ]] || ! find_complete_root "$ROOT" >/dev/null; then
+              echo "::error::Selected bundle did not contain the complete Android + Admin project."
+              find "$GITHUB_WORKSPACE/.ci/project-bundles/android-admin" -maxdepth 6 -type f -print | sort | head -500
+              exit 1
+            fi
+          fi
+
+          ROOT="$(cd "$ROOT" && pwd)"
+          echo "SOURCE_ROOT=$ROOT" >> "$GITHUB_ENV"
+          echo "source_root=$ROOT" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Android + Admin structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$SOURCE_ROOT"
+          for f in \
+            settings.gradle.kts \
+            build.gradle.kts \
+            app/build.gradle.kts \
+            app/src/main/AndroidManifest.xml \
+            app/src/main/assets/auto_call_ui.html \
+            app/src/main/java/com/example/autocallmanager/CallExecutionManager.kt \
+            app/src/main/java/com/example/autocallmanager/CallExecutionStore.kt \
+            admin-server/package.json \
+            admin-server/src/server.js \
+            admin-server/src/db.js \
+            admin-server/src/auth.js \
+            admin-server/src/prompts.js \
+            admin-server/src/voiceConsent.js \
+            admin-server/src/voiceCallService.js; do
+              test -f "$f" || { echo "::error::Missing $f"; exit 1; }
+          done
+          grep -Eq 'versionCode[[:space:]]*=[[:space:]]*109' app/build.gradle.kts
+          grep -Eq 'versionName[[:space:]]*=[[:space:]]*"1\.0\.9"' app/build.gradle.kts
+          echo "Complete project structure: PASS"
+
+      - name: Validate WebView JavaScript
+        working-directory: ${{ env.SOURCE_ROOT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const vm = require('vm');
+          const file = 'app/src/main/assets/auto_call_ui.html';
+          const html = fs.readFileSync(file, 'utf8');
+          const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
+          if (!scripts.length) throw new Error('No JavaScript blocks found');
+          scripts.forEach((source, i) => new vm.Script(source, {filename: `${file}#${i+1}`}));
+          console.log(`WebView JavaScript: PASS (${scripts.length} blocks)`);
+          NODE
+
+      - name: Clean
+        working-directory: ${{ env.SOURCE_ROOT }}
+        run: gradle clean --no-daemon --no-build-cache --stacktrace --console=plain
+
+      - name: Compile Kotlin
+        working-directory: ${{ env.SOURCE_ROOT }}
+        run: gradle :app:compileDebugKotlin --no-daemon --no-build-cache --stacktrace --console=plain
+
+      - name: Run unit tests
+        working-directory: ${{ env.SOURCE_ROOT }}
+        run: gradle :app:testDebugUnitTest --no-daemon --no-build-cache --stacktrace --console=plain
+
+      - name: Run Android Lint
+        working-directory: ${{ env.SOURCE_ROOT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle :app:lintDebug --no-daemon --no-build-cache --stacktrace --console=plain
+
+      - name: Build Debug APK
+        working-directory: ${{ env.SOURCE_ROOT }}
+        run: gradle :app:assembleDebug --no-daemon --no-build-cache --stacktrace --console=plain
+
+      - name: Verify and stage APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find "$SOURCE_ROOT/app/build/outputs/apk/debug" -type f -name '*.apk' -print -quit || true)"
+          test -n "$APK" || { echo "::error::Debug APK not found."; exit 1; }
+          mkdir -p "$SOURCE_ROOT/.ci/final-apk"
+          cp "$APK" "$SOURCE_ROOT/.ci/final-apk/AutoCallManager-v1.0.9-debug.apk"
+          ls -lh "$SOURCE_ROOT/.ci/final-apk/AutoCallManager-v1.0.9-debug.apk"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoCallManager-v1.0.9-debug
+          path: ${{ env.SOURCE_ROOT }}/.ci/final-apk/AutoCallManager-v1.0.9-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Android reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoCallManager-v1.0.9-android-failure-reports
+          path: |
+            ${{ env.SOURCE_ROOT }}/app/build/test-results/**
+            ${{ env.SOURCE_ROOT }}/app/build/reports/**
+            ${{ env.SOURCE_ROOT }}/app/build/outputs/logs/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Write job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### Build AutoCallManager APK"
+            echo
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Job status | \`${{ job.status }}\` |"
+            echo "| JDK | 17 (temurin) |"
+            echo "| Gradle | 8.9 |"
+            echo "| Android SDK | platform-35, build-tools 35.0.0 |"
+            if [[ -n "${SOURCE_ROOT:-}" ]]; then
+              echo "| Source root | \`$SOURCE_ROOT\` |"
+            fi
+            APK="${SOURCE_ROOT:-}/.ci/final-apk/AutoCallManager-v1.0.9-debug.apk"
+            if [[ -f "$APK" ]]; then
+              echo "| APK | \`AutoCallManager-v1.0.9-debug.apk\` ($(du -h "$APK" | cut -f1)) |"
+            else
+              echo "| APK | not produced |"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  admin-test:
+    name: Test Admin Panel Backend + AI Voice Safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      - name: Locate complete Android + Admin bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -f "$GITHUB_WORKSPACE/admin-server/package.json" &&
+                -f "$GITHUB_WORKSPACE/admin-server/src/server.js" ]]; then
+            ROOT="$GITHUB_WORKSPACE"
+          else
+            rm -rf .ci/admin-bundle
+            mkdir -p .ci/admin-bundle
+
+            SELECTED=""
+            while IFS= read -r -d '' zip; do
+              LIST="$(unzip -l "$zip" 2>/dev/null || true)"
+              if grep -Eq 'settings\.gradle\.kts$' <<<"$LIST" &&
+                 grep -Eq 'app/build\.gradle\.kts$' <<<"$LIST" &&
+                 grep -Eq 'admin-server/package\.json$' <<<"$LIST" &&
+                 grep -Eq 'admin-server/src/server\.js$' <<<"$LIST"; then
+                name="$(basename "$zip")"
+                if [[ "$name" == *COMPLETE*COMBINED*FINAL*.zip ]]; then
+                  SELECTED="$zip"
+                  break
+                elif [[ "$name" == *COMPLETE*LINT*FIXED*.zip && -z "$SELECTED" ]]; then
+                  SELECTED="$zip"
+                elif [[ -z "$SELECTED" ]]; then
+                  SELECTED="$zip"
+                fi
+              fi
+            done < <(find "$GITHUB_WORKSPACE" -maxdepth 4 -type f -iname '*.zip' -print0 | sort -z)
+
+            if [[ -z "$SELECTED" ]]; then
+              echo "::error::No complete Android + Admin bundle found."
+              find "$GITHUB_WORKSPACE" -maxdepth 4 -type f -print | sort | head -300
+              exit 1
+            fi
+
+            echo "Selected complete bundle: $SELECTED"
+            unzip -q "$SELECTED" -d .ci/admin-bundle
+
+            ROOT="$(find "$GITHUB_WORKSPACE/.ci/admin-bundle" \ -type f -path '*/admin-server/package.json' -print -quit | xargs -r dirname | xargs -r dirname)"
+
+            test -n "$ROOT" || {
+              echo "::error::admin-server/package.json not found after extraction."
+              exit 1
+            }
+          fi
+
+          ROOT="$(cd "$ROOT" && pwd)"
+          echo "SOURCE_ROOT=$ROOT" >> "$GITHUB_ENV"
+          echo "source_root=$ROOT" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Admin server structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$SOURCE_ROOT/admin-server"
+          for f in package.json src/server.js src/auth.js src/db.js src/prompts.js \
+                   src/voiceConsent.js src/voiceCallService.js public/admin/index.html \
+                   test.sh test_fullstack.sh test_voice_consent.js test_ai_voice_api.sh; do
+            test -f "$f" || { echo "::error::Missing admin file: $f"; exit 1; }
+          done
+          echo "Admin structure: PASS"
+
+      - name: Validate Admin source
+        working-directory: ${{ env.SOURCE_ROOT }}/admin-server
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in src/*.js; do node --check "$f"; done
+          for f in test.sh test_fullstack.sh test_ai_voice_api.sh; do bash -n "$f"; done
+          node -e 'const p=require("./package.json"); if (!/^1\.0\.9(?:$|[-.])/.test(p.version)) process.exit(1)'
+          echo "Admin source syntax: PASS"
+
+      - name: Install dependencies if declared
+        working-directory: ${{ env.SOURCE_ROOT }}/admin-server
+        shell: bash
+        run: |
+          set -euo pipefail
+          if node -e 'const p=require("./package.json"); const d={...(p.dependencies||{}),...(p.devDependencies||{})}; process.exit(Object.keys(d).length ? 0 : 1)'; then
+            if [[ -f package-lock.json ]]; then
+              npm ci --ignore-scripts --no-audit --no-fund
+            else
+              npm install --ignore-scripts --no-audit --no-fund
+            fi
+          else
+            echo "No npm dependencies declared."
+          fi
+
+      - name: Run Admin API test with diagnostics
+        working-directory: ${{ env.SOURCE_ROOT }}/admin-server
+        shell: bash
+        run: |
+          set +e
+          bash ./test.sh 2>&1 | tee "$RUNNER_TEMP/autocallmanager-admin-test.log"
+          rc=${PIPESTATUS[0]}
+          if [[ "$rc" -ne 0 ]]; then
+            echo "::error::test.sh failed with exit code $rc"
+            echo "----- test.sh server logs -----"
+            cat /tmp/server.log 2>/dev/null || true
+            cat /tmp/server2.log 2>/dev/null || true
+          fi
+          exit "$rc"
+
+      - name: Run full-stack test with diagnostics
+        working-directory: ${{ env.SOURCE_ROOT }}/admin-server
+        shell: bash
+        run: |
+          set +e
+          bash ./test_fullstack.sh 2>&1 | tee "$RUNNER_TEMP/autocallmanager-fullstack-test.log"
+          rc=${PIPESTATUS[0]}
+          if [[ "$rc" -ne 0 ]]; then
+            echo "::error::test_fullstack.sh failed with exit code $rc"
+            echo "----- server logs -----"
+            cat /tmp/server3.log 2>/dev/null || true
+            cat /tmp/server.log 2>/dev/null || true
+          fi
+          exit "$rc"
+
+      - name: Run AI Voice tests with diagnostics
+        working-directory: ${{ env.SOURCE_ROOT }}/admin-server
+        shell: bash
+        run: |
+          set +e
+          bash ./test_ai_voice_api.sh 2>&1 | tee "$RUNNER_TEMP/autocallmanager-ai-test.log"
+          rc=${PIPESTATUS[0]}
+          if [[ "$rc" -ne 0 ]]; then
+            echo "::error::test_ai_voice_api.sh failed with exit code $rc"
+            echo "----- AI server logs -----"
+            cat /tmp/acm-ai-voice-test.log 2>/dev/null || true
+          fi
+          exit "$rc"
+
+      - name: Run AI consent unit test with diagnostics
+        working-directory: ${{ env.SOURCE_ROOT }}/admin-server
+        shell: bash
+        run: |
+          set +e
+          node test_voice_consent.js 2>&1 | tee "$RUNNER_TEMP/autocallmanager-consent-test.log"
+          rc=${PIPESTATUS[0]}
+          if [[ "$rc" -ne 0 ]]; then
+            echo "::error::test_voice_consent.js failed with exit code $rc"
+          fi
+          exit "$rc"
+
+      - name: Provider safety check
+        working-directory: ${{ env.SOURCE_ROOT }}/admin-server
+        shell: bash
+        run: |
+          set -euo pipefail
+          unset TWILIO_ACCOUNT_SID TWILIO_AUTH_TOKEN GEMINI_API_KEY PUBLIC_APP_KEY
+          node <<'NODE'
+          const voice = require('./src/voiceCallService');
+          if (voice.configured()) throw new Error('Provider unexpectedly configured in CI');
+          if (voice.aiConfigured()) throw new Error('AI provider unexpectedly configured in CI');
+          console.log('Provider safety: PASS');
+          NODE
+
+      - name: Upload Admin diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoCallManager-v1.0.9-admin-test-logs
+          path: |
+            ${{ runner.temp }}/autocallmanager-*.log
+            /tmp/server.log
+            /tmp/server2.log
+            /tmp/server3.log
+            /tmp/acm-ai-voice-test.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Write job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### Test Admin Panel Backend + AI Voice Safety"
+            echo
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Job status | \`${{ job.status }}\` |"
+            echo "| Node.js | 22 |"
+            if [[ -n "${SOURCE_ROOT:-}" ]]; then
+              echo "| Source root | \`$SOURCE_ROOT\` |"
+            fi
+            echo "| Suites | test.sh, test_fullstack.sh, test_ai_voice_api.sh, test_voice_consent.js |"
+          } >> "$GITHUB_STEP_SUMMARY"
