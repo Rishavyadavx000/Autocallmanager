@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+<title>Auto Call Manager V1.1.0</title>
+<style>
+/* ============ DESIGN TOKENS ============ */
+:root{
+  --navy:#07121F; --navy-2:#0E1E30; --navy-3:#142A40; --navy-4:#1A3349;
+  --border:#1E3247; --border-soft:#16283B;
+  --ivory:#F7F3EA; --slate:#A8B7C7; --slate-dim:#63788C;
+  --cyan:#27A9E1; --cyan-dim:rgba(39,169,225,.14);
+  --purple:#8B72D8; --purple-dim:rgba(139,114,216,.14);
+  --amber:#E3A83B; --amber-dim:rgba(227,168,59,.14);
+  --green:#38B96B; --green-dim:rgba(56,185,107,.14);
+  --red:#D95C5C; --red-dim:rgba(217,92,92,.14);
+  --r-lg:16px; --r-md:14px; --r-sm:10px; --r-xs:8px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px;
+  --shadow-card:0 8px 24px rgba(2,7,14,.35);
+  --shadow-lg:0 16px 40px rgba(2,7,14,.45);
+}
+/* Dynamic runtime appearance settings */
+:root[data-theme="light"]{
+  --navy:#F5F8FB; --navy-2:#FFFFFF; --navy-3:#EEF3F7; --navy-4:#E4EBF2;
+  --border:#D7E0E8; --border-soft:#E3E9EF;
+  --ivory:#172333; --slate:#53667A; --slate-dim:#74879A;
+  --shadow-card:0 8px 24px rgba(23,35,51,.10);
+  --shadow-lg:0 16px 40px rgba(23,35,51,.15);
+}
+:root[data-accent="purple"]{--cyan:#8B72D8;--cyan-dim:rgba(139,114,216,.14);}
+:root[data-accent="amber"]{--cyan:#E3A83B;--cyan-dim:rgba(227,168,59,.14);}
+:root[data-accent="green"]{--cyan:#38B96B;--cyan-dim:rgba(56,185,107,.14);}
+:root[data-font="S"] body{font-size:13px;}
+:root[data-font="M"] body{font-size:15px;}
+:root[data-font="L"] body{font-size:17px;}
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0;}
+body{
+  background:var(--navy); color:var(--ivory);
+  font-family:'Manrope',-apple-system,BlinkMacSystemFont,sans-serif;
+  font-size:15px; line-height:1.45; -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+button,input,select,textarea{font-family:inherit; color:inherit;}
+button{cursor:pointer;}
+h1,h2,h3,p{margin:0;}
+.mono{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums; letter-spacing:.02em;}
+.serif{font-family:'Fraunces',serif;}
+.muted{color:var(--slate);}
+.dim{color:var(--slate-dim);}
+
+/* ============ APP SHELL ============ */
+.app-shell{max-width:440px; margin:0 auto; min-height:100vh; position:relative; background:var(--navy); border-left:1px solid var(--border-soft); border-right:1px solid var(--border-soft);}
+.screen{display:none; padding-bottom:40px; animation:fadeIn .18s ease;}
+.screen.active{display:block;}
+@keyframes fadeIn{from{opacity:0;} to{opacity:1;}}
+
+.screen-header{position:sticky; top:0; z-index:20; background:rgba(7,18,31,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--border-soft); padding:14px var(--sp-5) 12px;}
+.header-row{display:flex; align-items:center; gap:var(--sp-3);}
+.back-btn{width:38px; height:38px; border-radius:var(--r-sm); background:var(--navy-2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--ivory); flex-shrink:0;}
+.header-title{font-size:17px; font-weight:700; letter-spacing:.01em;}
+.header-sub{font-size:12px; color:var(--slate); margin-top:1px;}
+.header-spacer{flex:1;}
+.icon-btn{width:38px; height:38px; border-radius:var(--r-sm); background:var(--navy-2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--slate); flex-shrink:0;}
+.icon-btn:active{background:var(--navy-3);}
+.icon{width:20px; height:20px; display:block;}
+.icon-sm{width:16px; height:16px; display:block;}
+
+.screen-body{padding:var(--sp-5);}
+.section{margin-bottom:var(--sp-6);}
+.section-title{font-size:11.5px; font-weight:700; letter-spacing:.10em; text-transform:uppercase; color:var(--slate-dim); margin-bottom:var(--sp-3); display:flex; align-items:center; justify-content:space-between;}
+
+/* ============ BRAND ============ */
+.brand-row{display:flex; align-items:center; gap:12px;}
+.brand-mark{width:44px; height:44px; border-radius:13px; background:linear-gradient(160deg,var(--navy-3),var(--navy-2)); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--cyan); flex-shrink:0;}
+.brand-title-row{display:flex; align-items:baseline; gap:8px;}
+.brand-title{font-family:'Fraunces',serif; font-size:19px; font-weight:600; letter-spacing:.01em; color:var(--ivory);}
+.brand-version{font-size:10.5px; font-weight:700; color:var(--navy); background:var(--cyan); padding:2px 7px; border-radius:20px; letter-spacing:.03em;}
+.brand-tagline{font-size:12px; color:var(--slate); margin-top:2px; letter-spacing:.01em;}
+
+/* ============ CARDS ============ */
+.card{background:var(--navy-2); border:1px solid var(--border); border-radius:var(--r-lg); padding:var(--sp-5); box-shadow:var(--shadow-card);}
+.card-top-cyan{border-top:2.5px solid var(--cyan);}
+.card-top-purple{border-top:2.5px solid var(--purple);}
+.card-top-amber{border-top:2.5px solid var(--amber);}
+.card-top-red{border-top:2.5px solid var(--red);}
+
+.status-card{position:relative; border-radius:var(--r-lg); padding:22px var(--sp-5); background:radial-gradient(120% 140% at 15% 0%, rgba(39,169,225,.10), transparent 55%), var(--navy-2); border:1px solid rgba(39,169,225,.30); box-shadow:var(--shadow-lg);}
+.status-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+.live-pill{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--green); background:var(--green-dim); border:1px solid rgba(56,185,107,.35); padding:5px 10px 5px 8px; border-radius:20px;}
+.live-dot{width:7px; height:7px; border-radius:50%; background:var(--green); animation:pulse 2.4s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1; box-shadow:0 0 0 0 rgba(56,185,107,.5);} 50%{opacity:.55; box-shadow:0 0 0 5px rgba(56,185,107,0);}}
+.status-headline{font-family:'Fraunces',serif; font-size:24px; font-weight:600; color:var(--ivory); margin-bottom:6px;}
+.status-line{font-size:13px; color:var(--slate); display:flex; align-items:center; gap:8px;}
+.status-state-val{font-family:'IBM Plex Mono',monospace; color:var(--cyan); font-weight:600; letter-spacing:.03em;}
+.waveform{display:flex; align-items:flex-end; gap:3px; height:22px; margin-top:16px;}
+.wave-bar{width:4px; border-radius:2px; background:var(--cyan); opacity:.55;}
+
+/* stat strip */
+.stat-strip{display:flex; background:var(--navy-2); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; box-shadow:var(--shadow-card);}
+.stat-col{flex:1; padding:14px 6px; text-align:center; border-right:1px solid var(--border-soft);}
+.stat-col:last-child{border-right:none;}
+.stat-num{font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; color:var(--ivory);}
+.stat-label{font-size:10px; color:var(--slate-dim); margin-top:4px; letter-spacing:.02em; line-height:1.25;}
+.stat-icon{color:var(--cyan); margin-bottom:6px;}
+.stat-col.v .stat-icon{color:var(--purple);}
+.stat-col.a .stat-icon{color:var(--cyan);}
+.stat-col.h .stat-icon{color:var(--slate);}
+
+/* next event */
+.event-card{border-radius:var(--r-lg); border:1px solid var(--border); background:var(--navy-2); padding:var(--sp-5); box-shadow:var(--shadow-card);}
+.event-top{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;}
+.event-name{font-size:16px; font-weight:700; color:var(--ivory);}
+.event-number{font-size:12.5px; color:var(--slate); margin-top:2px;}
+.event-grid{display:flex; gap:10px; margin-bottom:14px;}
+.event-cell{flex:1; background:var(--navy-3); border:1px solid var(--border-soft); border-radius:var(--r-sm); padding:10px 12px;}
+.event-cell-label{font-size:9.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--slate-dim); margin-bottom:3px;}
+.event-cell-val{font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:600; color:var(--ivory);}
+.countdown-row{display:flex; align-items:center; justify-content:space-between; background:var(--cyan-dim); border:1px solid rgba(39,169,225,.3); border-radius:var(--r-sm); padding:11px 14px;}
+.countdown-label{font-size:11px; color:var(--cyan); font-weight:700; letter-spacing:.05em; text-transform:uppercase;}
+.countdown-val{font-family:'IBM Plex Mono',monospace; font-size:17px; font-weight:600; color:var(--ivory);}
+
+/* badges */
+.badge{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; letter-spacing:.02em; padding:4px 9px; border-radius:20px; white-space:nowrap;}
+.badge-cyan{color:var(--cyan); background:var(--cyan-dim); border:1px solid rgba(39,169,225,.3);}
+.badge-purple{color:var(--purple); background:var(--purple-dim); border:1px solid rgba(139,114,216,.3);}
+.badge-amber{color:var(--amber); background:var(--amber-dim); border:1px solid rgba(227,168,59,.3);}
+.badge-green{color:var(--green); background:var(--green-dim); border:1px solid rgba(56,185,107,.3);}
+.badge-red{color:var(--red); background:var(--red-dim); border:1px solid rgba(217,92,92,.3);}
+.badge-slate{color:var(--slate); background:rgba(168,183,199,.10); border:1px solid var(--border);}
+.dot{width:7px; height:7px; border-radius:50%; flex-shrink:0;}
+.dot-cyan{background:var(--cyan);} .dot-purple{background:var(--purple);} .dot-amber{background:var(--amber);}
+.dot-green{background:var(--green);} .dot-red{background:var(--red);} .dot-slate{background:var(--slate-dim);}
+
+/* buttons */
+.btn{display:flex; align-items:center; justify-content:center; gap:8px; font-family:'Manrope'; font-size:14.5px; font-weight:700; border-radius:var(--r-md); padding:14px 20px; border:1.5px solid transparent; transition:transform .05s; letter-spacing:.01em;}
+.btn:active{transform:scale(.98);}
+.btn-block{width:100%;}
+.btn-primary{background:var(--cyan); color:#052436;}
+.btn-outline{background:transparent; border-color:var(--border); color:var(--ivory);}
+.btn-outline-cyan{background:transparent; border-color:var(--cyan); color:var(--cyan);}
+.btn-danger{background:var(--red); color:#2E0A0A;}
+.btn-danger-outline{background:transparent; border-color:var(--red); color:var(--red);}
+.btn-sm{padding:9px 14px; font-size:13px; border-radius:var(--r-sm);}
+.btn-row{display:flex; gap:10px;}
+.btn-row .btn{flex:1;}
+
+.fab-add{display:flex; align-items:center; justify-content:center; gap:9px; width:100%; padding:16px; background:var(--cyan); color:#052436; border-radius:var(--r-md); font-size:15px; font-weight:800; letter-spacing:.02em; box-shadow:0 10px 26px rgba(39,169,225,.25);}
+
+/* secondary nav grid */
+.nav-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+.nav-tile{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:16px 8px; background:var(--navy-2); border:1px solid var(--border); border-radius:var(--r-md); color:var(--ivory);}
+.nav-tile:active{background:var(--navy-3);}
+.nav-tile .icon{color:var(--cyan);}
+.nav-tile span{font-size:11.5px; font-weight:700; letter-spacing:.03em;}
+
+/* ============ TOAST ============ */
+.toast-container{position:fixed; bottom:24px; left:0; right:0; display:flex; justify-content:center; z-index:200; pointer-events:none;}
+.toast{background:var(--navy-4); border:1px solid var(--border); color:var(--ivory); font-size:13px; font-weight:600; padding:12px 18px; border-radius:30px; box-shadow:var(--shadow-lg); opacity:0; transform:translateY(10px); transition:all .25s ease; max-width:86%; text-align:center;}
+.toast.show{opacity:1; transform:translateY(0);}
+
+/* ============ FORMS ============ */
+.field{margin-bottom:var(--sp-4);}
+.field-label{font-size:12.5px; font-weight:600; color:var(--slate); margin-bottom:7px; display:block;}
+.field-hint{font-size:11.5px; color:var(--slate-dim); margin-top:6px;}
+.input,.textarea,.select-native{width:100%; background:var(--navy-3); border:1px solid var(--border); border-radius:var(--r-sm); padding:13px 14px; font-size:14.5px; color:var(--ivory); outline:none;}
+.input:focus,.textarea:focus,.select-native:focus{border-color:var(--cyan);}
+.textarea{resize:vertical; min-height:84px; line-height:1.5; font-family:'Manrope';}
+.input-with-btn{display:flex; gap:10px;}
+.input-with-btn .input{flex:1;}
+.select-native{appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23A8B7C7' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center;}
+
+/* toggle switch */
+.toggle-row{display:flex; align-items:center; justify-content:space-between; padding:13px 0;}
+.toggle-row-text{flex:1; padding-right:12px;}
+.toggle-row-title{font-size:14px; font-weight:600; color:var(--ivory);}
+.toggle-row-sub{font-size:12px; color:var(--slate-dim); margin-top:2px;}
+.toggle{position:relative; width:46px; height:27px; flex-shrink:0;}
+.toggle input{opacity:0; width:0; height:0; position:absolute;}
+.toggle-track{position:absolute; inset:0; background:var(--navy-4); border:1px solid var(--border); border-radius:20px; transition:.2s;}
+.toggle-track::after{content:''; position:absolute; width:19px; height:19px; border-radius:50%; background:var(--slate); top:3px; left:3px; transition:.2s;}
+.toggle input:checked + .toggle-track{background:var(--cyan-dim); border-color:var(--cyan);}
+.toggle input:checked + .toggle-track::after{transform:translateX(19px); background:var(--cyan);}
+.toggle.purple input:checked + .toggle-track{background:var(--purple-dim); border-color:var(--purple);}
+.toggle.purple input:checked + .toggle-track::after{background:var(--purple);}
+.toggle.amber input:checked + .toggle-track{background:var(--amber-dim); border-color:var(--amber);}
+.toggle.amber input:checked + .toggle-track::after{background:var(--amber);}
+
+/* stepper */
+.stepper{display:flex; align-items:center; background:var(--navy-3); border:1px solid var(--border); border-radius:var(--r-sm); overflow:hidden;}
+.stepper-btn{width:46px; height:46px; background:transparent; border:none; color:var(--ivory); font-size:19px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.stepper-btn:active{background:var(--navy-4);}
+.stepper-val{flex:1; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600;}
+.time-part-input{width:100%;background:transparent;border:0;outline:0;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--ivory);padding:0;min-width:0;}
+.time-part-input:focus{color:var(--cyan);}
+
+.stepper-row{display:flex; align-items:center; gap:10px;}
+.stepper-row .field-label{margin-bottom:0; flex:1;}
+.stepper-row .stepper{width:150px;}
+.trio{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+.time-four{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+@media (min-width:381px){.time-four .field:nth-child(1),.time-four .field:nth-child(2),.time-four .field:nth-child(3),.time-four .field:nth-child(4){min-width:0;}}
+.time-part-input{min-width:0; width:100%; border:0; outline:none; background:transparent; color:var(--ivory); text-align:center; font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600; padding:0;}
+.time-now-card,.selected-time-card{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--navy-3);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:12px 14px;margin-top:12px;}
+.selected-time-card{background:var(--cyan-dim);border-color:rgba(39,169,225,.32);}
+.selected-time-value{font-size:18px;font-weight:700;color:var(--ivory);}
+.quick-time-row{display:flex;gap:8px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none;}
+.quick-time-row::-webkit-scrollbar{display:none;}
+.overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.metric-card{background:var(--navy-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-card);}
+.metric-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;}
+.metric-icon{color:var(--cyan);display:flex;}
+.metric-label-top{font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--slate-dim);}
+.metric-num{font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:700;color:var(--ivory);line-height:1.05;}
+.metric-label{font-size:11px;color:var(--slate-dim);margin-top:5px;}
+.today-card{margin-top:10px;background:var(--navy-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-card);}
+.today-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.progress-track{height:7px;background:var(--navy-4);border-radius:8px;overflow:hidden;margin:13px 0 10px;}
+.progress-fill{height:100%;background:var(--cyan);border-radius:8px;transition:width .25s ease;}
+.today-mini{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--slate-dim);}
+.today-mini b{color:var(--ivory);font-family:'IBM Plex Mono',monospace;}
+.text-link{border:0;background:transparent;color:var(--cyan);font-size:10px;font-weight:800;letter-spacing:.06em;padding:0;}
+.recent-card{background:var(--navy-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:4px 16px;box-shadow:var(--shadow-card);}
+.recent-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border-soft);}
+.recent-row:last-child{border-bottom:none;}
+.recent-icon{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;}
+.recent-info{flex:1;min-width:0;}
+.recent-name{font-size:13px;font-weight:700;color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.recent-sub{font-size:10.5px;color:var(--slate-dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.recent-time{font-size:10px;color:var(--slate-dim);white-space:nowrap;}
+.trio .field-label{text-align:center;}
+
+/* segmented control */
+.segmented{display:flex; background:var(--navy-3); border:1px solid var(--border); border-radius:var(--r-sm); padding:3px; gap:3px;}
+.segmented-btn{flex:1; text-align:center; padding:10px 6px; border-radius:8px; font-size:13px; font-weight:700; color:var(--slate); background:transparent; border:none;}
+.segmented-btn.active{background:var(--cyan); color:#052436;}
+.segmented-btn.purple.active{background:var(--purple); color:#1B1130;}
+
+/* module panel (call / voice / ai / notification blocks) */
+.module-panel{border-radius:var(--r-lg); border:1px solid var(--border); background:var(--navy-2); overflow:hidden; margin-bottom:var(--sp-5);}
+.module-header{display:flex; align-items:center; gap:10px; padding:15px var(--sp-5); border-bottom:1px solid var(--border-soft);}
+.module-header .icon{width:19px; height:19px;}
+.module-title{font-size:14.5px; font-weight:800; letter-spacing:.02em; flex:1;}
+.module-body{padding:var(--sp-5);}
+.module-panel.cyan{border-top:2.5px solid var(--cyan);}
+.module-panel.purple{border-top:2.5px solid var(--purple);}
+.module-panel.amber{border-top:2.5px solid var(--amber);}
+.module-panel.cyan .module-header .icon,.module-panel.cyan .module-title{color:var(--cyan);}
+.module-panel.purple .module-header .icon,.module-panel.purple .module-title{color:var(--purple);}
+.module-panel.amber .module-header .icon,.module-panel.amber .module-title{color:var(--amber);}
+
+/* wizard progress + bottom bar */
+.wizard-progress{display:flex; align-items:center; gap:6px; margin-top:12px;}
+.wizard-dot{flex:1; height:3px; border-radius:3px; background:var(--border);}
+.wizard-dot.done{background:var(--cyan);}
+.wizard-dot.active{background:var(--cyan);}
+.wizard-step-label{font-size:11px; color:var(--slate); margin-top:9px; letter-spacing:.03em; text-transform:uppercase; font-weight:700;}
+.bottom-bar{position:sticky; bottom:0; z-index:20; background:rgba(7,18,31,.94); backdrop-filter:blur(10px); border-top:1px solid var(--border-soft); padding:14px var(--sp-5); display:flex; gap:10px;}
+
+/* lists / rows */
+.search-wrap{position:relative; margin-bottom:var(--sp-4);}
+.search-wrap .icon{position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--slate-dim);}
+.search-wrap .input{padding-left:42px;}
+.chip-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:var(--sp-4); scrollbar-width:none;}
+.chip-row::-webkit-scrollbar{display:none;}
+.chip{flex-shrink:0; padding:9px 15px; border-radius:20px; background:var(--navy-2); border:1px solid var(--border); font-size:12.5px; font-weight:700; color:var(--slate); white-space:nowrap;}
+.chip.active{background:var(--cyan); border-color:var(--cyan); color:#052436;}
+
+.avatar{width:44px; height:44px; border-radius:12px; background:var(--navy-3); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:var(--cyan); flex-shrink:0;}
+.contact-row{display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid var(--border-soft);}
+.contact-row:last-child{border-bottom:none;}
+.contact-info{flex:1; min-width:0;}
+.contact-name{font-size:14.5px; font-weight:700; color:var(--ivory);}
+.contact-num{font-size:12px; color:var(--slate-dim); margin-top:1px;}
+.contact-group{font-size:10px; color:var(--slate-dim); background:var(--navy-3); border:1px solid var(--border-soft); padding:2px 7px; border-radius:6px; display:inline-block; margin-top:3px;}
+
+.schedule-card{background:var(--navy-2); border:1px solid var(--border); border-radius:var(--r-lg); padding:var(--sp-4) var(--sp-5); margin-bottom:14px; box-shadow:var(--shadow-card);}
+.sc-top{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;}
+.sc-name{font-size:15px; font-weight:700; color:var(--ivory);}
+.sc-num{font-size:12px; color:var(--slate-dim); margin-top:1px;}
+.sc-group{font-size:10px; color:var(--cyan); font-weight:700; letter-spacing:.04em; text-transform:uppercase; margin-top:5px;}
+.sc-grid{display:flex; gap:10px; margin-bottom:12px;}
+.sc-cell{flex:1; background:var(--navy-3); border:1px solid var(--border-soft); border-radius:9px; padding:8px 10px;}
+.sc-cell-label{font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-dim); margin-bottom:2px;}
+.sc-cell-val{font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:600; color:var(--ivory);}
+.sc-status-row{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:13px;}
+.sc-actions{display:flex; gap:8px; border-top:1px solid var(--border-soft); padding-top:12px;}
+.sc-act{flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; padding:9px 4px; border-radius:10px; background:var(--navy-3); border:1px solid var(--border-soft); color:var(--slate);}
+.sc-act:active{background:var(--navy-4);}
+.sc-act span{font-size:9.5px; font-weight:700; letter-spacing:.02em;}
+.sc-timeline-link{display:flex; align-items:center; justify-content:center; gap:6px; font-size:12px; font-weight:700; color:var(--cyan); padding-top:11px; margin-top:2px; border-top:1px solid var(--border-soft);}
+
+.history-row{padding:13px 0; border-bottom:1px solid var(--border-soft);}
+.history-row:last-child{border-bottom:none;}
+.hr-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;}
+.hr-name{font-size:14px; font-weight:700; color:var(--ivory);}
+.hr-time{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--slate-dim);}
+.hr-badges{display:flex; flex-wrap:wrap; gap:6px;}
+
+/* settings */
+.settings-group{margin-bottom:var(--sp-6);}
+.settings-group-title{font-size:11.5px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--slate-dim); margin-bottom:10px; padding-left:2px;}
+.settings-card{background:var(--navy-2); border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden;}
+.settings-row{display:flex; align-items:center; gap:12px; padding:14px var(--sp-5); border-bottom:1px solid var(--border-soft);}
+.settings-row:last-child{border-bottom:none;}
+.settings-row .icon{color:var(--slate); flex-shrink:0;}
+.settings-row-label{flex:1;}
+.settings-row-title{font-size:14px; font-weight:600; color:var(--ivory);}
+.settings-row-sub{font-size:11.5px; color:var(--slate-dim); margin-top:2px;}
+.settings-row-val{font-size:13px; color:var(--slate); font-weight:600;}
+.chevron-r{color:var(--slate-dim); flex-shrink:0;}
+.color-dot{width:22px; height:22px; border-radius:50%; border:2px solid transparent;}
+.color-dot.selected{border-color:var(--ivory);}
+
+/* modal */
+.modal-overlay{position:fixed; inset:0; background:rgba(2,7,14,.72); z-index:100; display:none; align-items:flex-end; justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal-sheet{width:100%; max-width:440px; background:var(--navy-2); border:1px solid var(--border); border-top-left-radius:22px; border-top-right-radius:22px; padding:var(--sp-5) var(--sp-5) 28px; max-height:82vh; overflow-y:auto; animation:slideUp .22s ease;}
+@keyframes slideUp{from{transform:translateY(24px); opacity:.6;} to{transform:translateY(0); opacity:1;}}
+.modal-handle{width:38px; height:4px; background:var(--border); border-radius:4px; margin:0 auto 18px;}
+.modal-title-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;}
+.modal-title{font-size:16.5px; font-weight:800;}
+
+.timeline{position:relative; padding-left:28px;}
+.timeline-item{position:relative; padding-bottom:22px;}
+.timeline-item:last-child{padding-bottom:0;}
+.timeline-item::before{content:''; position:absolute; left:-22px; top:2px; width:11px; height:11px; border-radius:50%; background:var(--navy-4); border:2px solid var(--slate-dim); z-index:2;}
+.timeline-item::after{content:''; position:absolute; left:-17px; top:15px; width:1.5px; bottom:-8px; background:var(--border);}
+.timeline-item:last-child::after{display:none;}
+.timeline-item.done::before{background:var(--green); border-color:var(--green);}
+.timeline-item.active::before{background:var(--cyan); border-color:var(--cyan); box-shadow:0 0 0 4px rgba(39,169,225,.2); animation:pulse 2s ease-in-out infinite;}
+.timeline-item.failed::before{background:var(--red); border-color:var(--red);}
+.timeline-label{font-size:13.5px; font-weight:700; color:var(--ivory);}
+.timeline-sub{font-size:11.5px; color:var(--slate-dim); margin-top:2px;}
+.timeline-time{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--slate-dim); margin-top:2px;}
+
+.empty-state{text-align:center; padding:40px 20px; color:var(--slate-dim);}
+.empty-state .icon{width:32px; height:32px; margin:0 auto 12px; opacity:.5;}
+
+html[data-theme="light"] body{--navy:#F6F3EB;--navy-2:#FFFFFF;--navy-3:#F0ECE3;--navy-4:#E6E1D7;--border:#D8D0C2;--border-soft:#E7E1D6;--ivory:#17202A;--slate:#5C6976;--slate-dim:#77828D;--shadow-card:0 8px 24px rgba(30,34,40,.12);--shadow-lg:0 16px 40px rgba(30,34,40,.16);}
+:root[data-accent="purple"]{--cyan:#8B72D8;--cyan-dim:rgba(139,114,216,.14);}
+:root[data-accent="amber"]{--cyan:#E3A83B;--cyan-dim:rgba(227,168,59,.14);}
+:root[data-accent="green"]{--cyan:#38B96B;--cyan-dim:rgba(56,185,107,.14);}
+html[data-font="S"] body{font-size:14px;}
+html[data-font="L"] body{font-size:16px;}
+</style>
+</head>
+<body>
+<!-- ============ ICON SPRITE ============ -->
+<svg style="display:none">
+<defs>
+<symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.36 11.36 0 003.57.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.36 11.36 0 00.57 3.57 1 1 0 01-.25 1.02l-2.2 2.2z"/></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0014 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></symbol>
+<symbol id="i-wave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="10" x2="4" y2="14"/><line x1="8" y1="6" x2="8" y2="18"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="16" y1="6" x2="16" y2="18"/><line x1="20" y1="10" x2="20" y2="14"/></symbol>
+<symbol id="i-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="3"/><line x1="12" y1="4" x2="12" y2="8"/><circle cx="12" cy="3" r="1.4" fill="currentColor" stroke="none"/><circle cx="9" cy="14" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="1.4" fill="currentColor" stroke="none"/><line x1="9" y1="18" x2="15" y2="18"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4a5 5 0 00-5 5v3.2l-1.6 2.8h13.2L17 12.2V9a5 5 0 00-5-5z"/><path d="M10 18a2 2 0 004 0"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c0-4.2 3.4-7.5 7.5-7.5s7.5 3.3 7.5 7.5"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.3"/><path d="M2.7 19.5c0-3.6 2.8-6.3 6.3-6.3s6.3 2.7 6.3 6.3"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15.5 13.2c2.9.3 5 2.7 5 6.3"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-chevron-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 8 12 15 19"/></symbol>
+<symbol id="i-chevron-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 000-3L18 6a2.1 2.1 0 00-3 0L4.5 16.5z"/><line x1="14" y1="8" x2="17" y2="11"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><path d="M6 7v13a2 2 0 002 2h8a2 2 0 002-2V7"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 4 20 12 6 20"/></symbol>
+<symbol id="i-stop" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+<symbol id="i-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8.5L4 19.5z"/></symbol>
+<symbol id="i-dialer" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="7" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="17" cy="6" r="1.6"/><circle cx="7" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="17" cy="12" r="1.6"/><circle cx="7" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="8 12.5 10.8 15.3 16 9.5"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 3 22 20 2 20"/><line x1="12" y1="9" x2="12" y2="14.5"/><circle cx="12" cy="17.3" r="1" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.3" y1="15.3" x2="20.5" y2="20.5"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2l7 2.8v6c0 5-3 7.8-7 8.8-4-1-7-3.8-7-8.8V6z"/></symbol>
+<symbol id="i-database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6"/><path d="M4.5 12v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6"/></symbol>
+<symbol id="i-volume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h4l5 4v-13l-5 4z"/><path d="M16.2 9a4.2 4.2 0 010 6"/></symbol>
+<symbol id="i-vibrate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="3.5" width="8" height="17" rx="2"/><line x1="3" y1="9" x2="3" y2="15"/><line x1="21" y1="9" x2="21" y2="15"/></symbol>
+<symbol id="i-battery" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7.5" width="17" height="9" rx="2"/><line x1="22" y1="10.5" x2="22" y2="13.5"/><rect x="4.5" y="9.5" width="8" height="5" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
+<symbol id="i-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 108.5-8.5A8.5 8.5 0 003.9 8.5"/><polyline points="3.5 4 3.5 8.5 8 8.5"/><polyline points="12 8 12 12 15 14"/></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="7.5" y1="3" x2="7.5" y2="6.5"/><line x1="16.5" y1="3" x2="16.5" y2="6.5"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></symbol>
+</defs>
+</svg>
+
+<div class="app-shell">
+<!-- ============ DASHBOARD ============ -->
+<div class="screen active" id="screen-dashboard">
+  <div class="screen-header">
+    <div class="header-row">
+      <div class="brand-row" style="flex:1">
+        <div class="brand-mark" onclick="openPhoneModule()" role="button" tabindex="0" aria-label="Phone" style="cursor:pointer"><svg class="icon" style="width:24px;height:24px"><use href="#i-phone"/></svg></div>
+        <div>
+          <div class="brand-title-row">
+            <span class="brand-title">AUTO CALL MANAGER</span>
+            <span class="brand-version">V1.1.0</span>
+          </div>
+          <div class="brand-tagline">Smart Call &bull; Voice &bull; AI Scheduler</div>
+        </div>
+      </div>
+      <button class="icon-btn" onclick="nav('screen-calls')" aria-label="Schedule"><svg class="icon"><use href="#i-calendar"/></svg></button>
+      <button class="icon-btn" onclick="nav('screen-settings')" aria-label="Menu"><svg class="icon"><use href="#i-menu"/></svg></button>
+    </div>
+  </div>
+
+  <div class="screen-body">
+    <div class="section">
+      <button class="fab-add" onclick="resetWizard(); nav('screen-add');"><svg class="icon"><use href="#i-plus"/></svg>ADD SCHEDULE</button>
+    </div>
+
+    <div class="section">
+      <div class="status-card">
+        <div class="status-top">
+          <span class="live-pill" id="dash-system-pill"><span class="live-dot"></span>System Ready</span>
+          <svg class="icon" style="color:var(--slate-dim)"><use href="#i-shield"/></svg>
+        </div>
+        <div class="status-headline" id="dash-system-headline">All systems operating normally</div>
+        <div class="status-line">Local call state: <span class="status-state-val" id="dash-live-state">IDLE</span></div>
+        <div class="status-line">Scheduled call engine: <span class="status-state-val" id="dash-call-ready">CHECKING</span></div>
+        <div class="waveform">
+          <span class="wave-bar" style="height:6px"></span><span class="wave-bar" style="height:12px"></span><span class="wave-bar" style="height:20px"></span><span class="wave-bar" style="height:9px"></span><span class="wave-bar" style="height:16px"></span><span class="wave-bar" style="height:8px"></span><span class="wave-bar" style="height:14px"></span><span class="wave-bar" style="height:22px"></span><span class="wave-bar" style="height:11px"></span><span class="wave-bar" style="height:17px"></span><span class="wave-bar" style="height:7px"></span><span class="wave-bar" style="height:13px"></span><span class="wave-bar" style="height:19px"></span><span class="wave-bar" style="height:10px"></span><span class="wave-bar" style="height:15px"></span><span class="wave-bar" style="height:6px"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Overview <span class="dim" id="dash-last-sync">Live</span></div>
+      <div class="overview-grid">
+        <div class="metric-card"><div class="metric-top"><span class="metric-icon"><svg class="icon-sm"><use href="#i-phone"/></svg></span><span class="metric-label-top">ACTIVE</span></div><div class="metric-num" id="dash-active-count">0</div><div class="metric-label">Active schedules</div></div>
+        <div class="metric-card"><div class="metric-top"><span class="metric-icon"><svg class="icon-sm"><use href="#i-clock"/></svg></span><span class="metric-label-top">TODAY</span></div><div class="metric-num" id="dash-today-count">0</div><div class="metric-label">Executed events</div></div>
+        <div class="metric-card"><div class="metric-top"><span class="metric-icon"><svg class="icon-sm"><use href="#i-check"/></svg></span><span class="metric-label-top">SUCCESS</span></div><div class="metric-num" id="dash-success-count">0</div><div class="metric-label">Successful today</div></div>
+        <div class="metric-card"><div class="metric-top"><span class="metric-icon"><svg class="icon-sm"><use href="#i-alert"/></svg></span><span class="metric-label-top">FAILED</span></div><div class="metric-num" id="dash-failed-count">0</div><div class="metric-label">Failed today</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Today</div>
+      <div class="today-card">
+        <div class="today-head"><div><div class="event-name">Today</div><div class="event-number" id="dash-today-summary">0 executed · 0 pending</div></div><span class="badge badge-cyan" id="dash-success-rate">0% success</span></div>
+        <div class="progress-track"><div class="progress-fill" id="dash-success-progress" style="width:0%"></div></div>
+        <div class="today-mini"><span>Pending <b id="dash-pending-count">0</b></span><span>Voice <b id="dash-voice-count">0</b></span><span>AI <b id="dash-ai-count">0</b></span><span>History <b id="dash-history-count">0</b></span></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Next Event</div>
+      <div class="event-card">
+        <div class="event-top">
+          <div>
+            <div class="event-name" id="ne-name">No scheduled events</div>
+            <div class="event-number" id="ne-number">Create a schedule to begin</div>
+          </div>
+          <span class="badge badge-slate" id="ne-badge"><span class="dot dot-slate"></span>Idle</span>
+        </div>
+        <div class="event-grid">
+          <div class="event-cell"><div class="event-cell-label">Date</div><div class="event-cell-val" id="ne-date">--</div></div>
+          <div class="event-cell"><div class="event-cell-label">Exact Time</div><div class="event-cell-val mono" id="ne-time">--:--:--</div></div>
+        </div>
+        <div class="countdown-row">
+          <span class="countdown-label">Starts in</span>
+          <span class="countdown-val mono" id="ne-countdown">--:--:--</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" style="margin-bottom:8px">
+      <div class="section-title">Modules</div>
+      <div class="nav-grid">
+        <button class="nav-tile" onclick="nav('screen-calls')"><svg class="icon"><use href="#i-phone"/></svg><span>CALLS</span></button>
+        <button class="nav-tile" onclick="nav('screen-voice')"><svg class="icon" style="color:var(--purple)"><use href="#i-wave"/></svg><span>VOICE</span></button>
+        <button class="nav-tile" onclick="nav('screen-ai')"><svg class="icon"><use href="#i-bot"/></svg><span>AI</span></button>
+        <button class="nav-tile" onclick="nav('screen-history')"><svg class="icon"><use href="#i-history"/></svg><span>HISTORY</span></button>
+        <button class="nav-tile" onclick="nav('screen-contacts')"><svg class="icon"><use href="#i-users"/></svg><span>CONTACTS</span></button>
+        <button class="nav-tile" onclick="nav('screen-settings')"><svg class="icon"><use href="#i-settings"/></svg><span>SETTINGS</span></button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Recent Activity <button class="text-link" onclick="nav('screen-history')">VIEW ALL</button></div>
+      <div class="recent-card" id="dash-recent-list"><div class="empty-state" style="padding:20px">No recent activity</div></div>
+    </div>
+  </div>
+</div>
+<!-- ============ ADD SCHEDULE WIZARD ============ -->
+<div class="screen" id="screen-add">
+  <div class="screen-header">
+    <div class="header-row">
+      <button class="back-btn" onclick="nav('screen-dashboard')" aria-label="Back"><svg class="icon"><use href="#i-chevron-l"/></svg></button>
+      <div>
+        <div class="header-title">Add Schedule</div>
+        <div class="header-sub" id="wiz-step-label">Step 1 of 6 &middot; Contact</div>
+      </div>
+    </div>
+    <div class="wizard-progress" id="wiz-progress">
+      <div class="wizard-dot" data-d="1"></div><div class="wizard-dot" data-d="2"></div><div class="wizard-dot" data-d="3"></div><div class="wizard-dot" data-d="4"></div><div class="wizard-dot" data-d="5"></div><div class="wizard-dot" data-d="6"></div>
+    </div>
+  </div>
+
+  <div class="screen-body">
+    <div class="wizard-step" data-step="1">
+      <div class="section-title">Contact</div>
+      <div class="field">
+        <label class="field-label">Phone Number</label>
+        <input class="input" type="tel" id="w-phone" placeholder="+91 00000 00000">
+      </div>
+      <button class="btn btn-outline btn-block" onclick="openContactPicker()" style="margin-bottom:16px"><svg class="icon-sm"><use href="#i-users"/></svg>PICK CONTACT</button>
+    </div>
+
+    <div class="wizard-step" data-step="2" style="display:none">
+      <div class="section-title">Date &amp; Time</div>
+      <div class="field">
+        <label class="field-label">Date</label>
+        <input class="input" type="date" id="w-date">
+      </div>
+      <div class="time-four">
+        <div class="field">
+          <div class="field-label" style="font-size:10px">HOUR</div>
+          <div class="stepper"><button class="stepper-btn" type="button" onclick="stepVal('w-hour',-1,1,12)"><svg class="icon-sm"><use href="#i-minus"/></svg></button><input class="stepper-val time-part-input" id="w-hour" inputmode="numeric" type="text" maxlength="2" value="09" aria-label="Hour" oninput="normalizeTimeInput('w-hour',1,12)" onblur="normalizeTimeInput('w-hour',1,12,true)"><button class="stepper-btn" type="button" onclick="stepVal('w-hour',1,1,12)"><svg class="icon-sm"><use href="#i-plus"/></svg></button></div>
+        </div>
+        <div class="field">
+          <div class="field-label" style="font-size:10px">MINUTE</div>
+          <div class="stepper"><button class="stepper-btn" type="button" onclick="stepVal('w-minute',-1,0,59)"><svg class="icon-sm"><use href="#i-minus"/></svg></button><input class="stepper-val time-part-input" id="w-minute" inputmode="numeric" type="text" maxlength="2" value="15" aria-label="Minute" oninput="normalizeTimeInput('w-minute',0,59)" onblur="normalizeTimeInput('w-minute',0,59,true)"><button class="stepper-btn" type="button" onclick="stepVal('w-minute',1,0,59)"><svg class="icon-sm"><use href="#i-plus"/></svg></button></div>
+        </div>
+        <div class="field">
+          <div class="field-label" style="font-size:10px">SECOND</div>
+          <div class="stepper"><button class="stepper-btn" type="button" onclick="stepVal('w-second',-1,0,59)"><svg class="icon-sm"><use href="#i-minus"/></svg></button><input class="stepper-val time-part-input" id="w-second" inputmode="numeric" type="text" maxlength="2" value="00" aria-label="Second" oninput="normalizeTimeInput('w-second',0,59)" onblur="normalizeTimeInput('w-second',0,59,true)"><button class="stepper-btn" type="button" onclick="stepVal('w-second',1,0,59)"><svg class="icon-sm"><use href="#i-plus"/></svg></button></div>
+        </div>
+        <div class="field">
+          <div class="field-label" style="font-size:10px">AM / PM</div>
+          <div class="segmented">
+            <button class="segmented-btn active" id="w-am" onclick="setSeg(this,'w-ampm','AM')">AM</button>
+            <button class="segmented-btn" id="w-pm" onclick="setSeg(this,'w-ampm','PM')">PM</button>
+          </div>
+        </div>
+      </div>
+      <div class="time-now-card">
+        <span class="muted">Device time now</span>
+        <span class="mono" id="w-now-clock">--:--:-- --</span>
+      </div>
+      <div class="selected-time-card">
+        <div><div class="field-label" style="margin-bottom:2px">Selected time</div><div class="selected-time-value mono" id="w-selected-time">--:--:-- --</div></div>
+        <span class="badge badge-slate" id="w-time-validity">Waiting</span>
+      </div>
+      <div class="quick-time-row">
+        <button type="button" class="chip" onclick="setNowTime()">NOW</button>
+        <button type="button" class="chip" onclick="adjustSelectedMinutes(1)">+1 MIN</button>
+        <button type="button" class="chip" onclick="adjustSelectedMinutes(5)">+5 MIN</button>
+        <button type="button" class="chip" onclick="adjustSelectedMinutes(10)">+10 MIN</button>
+      </div>
+      <div class="field-hint">Trigger time is exact to the second in 12-hour format. For today, choose a future time.</div>
+      <div class="field" style="margin-top:18px">
+        <label class="field-label">Recurrence</label>
+        <select class="select-native" id="w-recurrence" onchange="toggleRepeatDays()">
+          <option value="ONCE">Once</option><option value="DAILY">Daily</option><option value="WEEKLY">Weekly</option>
+        </select>
+      </div>
+      <div class="field" id="w-repeat-days-wrap" style="display:none">
+        <label class="field-label">Weekly Days</label>
+        <div class="chip-row" id="w-repeat-days">
+          <button type="button" class="chip" data-day="1" onclick="toggleDay(this)">Sun</button>
+          <button type="button" class="chip" data-day="2" onclick="toggleDay(this)">Mon</button>
+          <button type="button" class="chip" data-day="3" onclick="toggleDay(this)">Tue</button>
+          <button type="button" class="chip" data-day="4" onclick="toggleDay(this)">Wed</button>
+          <button type="button" class="chip" data-day="5" onclick="toggleDay(this)">Thu</button>
+          <button type="button" class="chip" data-day="6" onclick="toggleDay(this)">Fri</button>
+          <button type="button" class="chip" data-day="7" onclick="toggleDay(this)">Sat</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-step="3" style="display:none">
+      <div class="module-panel cyan">
+        <div class="module-header">
+          <svg class="icon"><use href="#i-phone"/></svg><span class="module-title">CALL FUNCTION</span>
+          <label class="toggle"><input type="checkbox" id="w-call-enabled" checked onchange="toggleModule('call')"><span class="toggle-track"></span></label>
+        </div>
+        <div class="module-body" id="w-call-body">
+          <div class="field" style="margin-bottom:18px">
+            <label class="field-label">Call Mode</label>
+            <div class="segmented" id="w-call-mode">
+              <button type="button" class="segmented-btn active" onclick="setCallMode('NORMAL_SIM')">NORMAL SIM</button>
+              <button type="button" class="segmented-btn" onclick="setCallMode('AI_VOICE')">AI VOICE</button>
+            </div>
+            <div class="field-hint">AI Voice requires the Admin/Backend URL set in Settings &rarr; Administration, a provider configured on that server, and recipient consent.</div>
+          </div>
+          <div class="stepper-row" style="margin-bottom:18px">
+            <label class="field-label">Attempts (1&ndash;50)</label>
+            <div class="stepper"><button class="stepper-btn" onclick="stepVal('w-attempts',-1,1,50)"><svg class="icon-sm"><use href="#i-minus"/></svg></button><span class="stepper-val" id="w-attempts">5</span><button class="stepper-btn" onclick="stepVal('w-attempts',1,1,50)"><svg class="icon-sm"><use href="#i-plus"/></svg></button></div>
+          </div>
+          <label class="field-label">Retry Interval</label>
+          <div class="trio" style="margin-top:9px">
+            <div class="field"><div class="field-label" style="font-size:10px;text-align:center">HRS</div><div class="stepper"><button class="stepper-btn" onclick="stepVal('w-retry-h',-1,0,23)"><svg class="icon-sm"><use href="#i-minus"/></svg></button><span class="stepper-val" id="w-retry-h">0</span><button class="stepper-btn" onclick="stepVal('w-retry-h',1,0,23)"><svg class="icon-sm"><use href="#i-plus"/></svg></button></div></div>
+            <div class="field"><div class="field-label" style="font-size:10px;text-align:center">MIN</div><div class="stepper"><button class="stepper-btn" onclick="stepVal('w-retry-m',-1,0,59)"><svg class="icon-sm"><use href="#i-minus"/></svg></button><span class="stepper-val" id="w-retry-m">5</span><button class="stepper-btn" onclick="stepVal('w-retry-m',1,0,59)"><svg class="icon-sm"><use href="#i-plus"/></svg></button></div></div>
+            <div class="field"><div class="field-label" style="font-size:10px;text-align:center">SEC</div><div class="stepper"><button class="stepper-btn" onclick="stepVal('w-retry-s',-1,0,59)"><svg class="icon-sm"><use href="#i-minus"/></svg></button><span class="stepper-val" id="w-retry-s">0</span><button class="stepper-btn" onclick="stepVal('w-retry-s',1,0,59)"><svg class="icon-sm"><use href="#i-plus"/></svg></button></div></div>
+          </div>
+          <div class="field-hint">Minimum retry interval is 20 seconds &mdash; enforced automatically if hours and minutes are both 0.</div>
+
+          <div class="section" id="w-sim-section" style="display:none;margin:20px 0 0">
+            <div class="toggle-row" style="padding-top:4px">
+              <div class="toggle-row-text">
+                <div class="toggle-row-title">Use specific SIM</div>
+                <div class="toggle-row-sub">Only shown when 2 active SIMs are available</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="w-sim-enabled" onchange="toggleSimSelection()"><span class="toggle-track"></span></label>
+            </div>
+            <div id="w-sim-body" style="display:none">
+              <label class="field-label">Call from SIM</label>
+              <select class="select-native" id="w-sim-select" onchange="selectedSimHandle=this.value"></select>
+              <div class="field-hint">The selected SIM is used for scheduled cellular calls. If disabled, Android uses the phone's default outgoing SIM.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-step="4" style="display:none">
+      <div class="module-panel purple">
+        <div class="module-header">
+          <svg class="icon"><use href="#i-wave"/></svg><span class="module-title">VOICE MESSAGE</span>
+          <label class="toggle purple"><input type="checkbox" id="w-voice-enabled" checked onchange="toggleModule('voice')"><span class="toggle-track"></span></label>
+        </div>
+        <div class="module-body" id="w-voice-body">
+          <div class="field">
+            <label class="field-label">Language</label>
+            <div class="segmented">
+              <button class="segmented-btn purple" onclick="setSeg(this,'w-lang','Hindi')">Hindi</button>
+              <button class="segmented-btn purple active" onclick="setSeg(this,'w-lang','Hinglish')">Hinglish</button>
+              <button class="segmented-btn purple" onclick="setSeg(this,'w-lang','English')">English</button>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Message</label>
+            <textarea class="textarea" id="w-voice-msg">Namaste Papa, yeh ek pyara reminder hai apni dawai lene ke liye. Apna khayal rakhiye!</textarea>
+          </div>
+          <div class="field">
+            <label class="field-label">Voice</label>
+            <select class="select-native" id="w-voice-select">
+              <option>Female &middot; Warm</option><option>Male &middot; Calm</option><option>Female &middot; Clear</option><option>Male &middot; Formal</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Speed &middot; <span id="w-speed-val">1.0x</span></label>
+            <input type="range" min="0.5" max="2" step="0.1" value="1" id="w-speed" style="width:100%;accent-color:var(--purple)" oninput="document.getElementById('w-speed-val').textContent=parseFloat(this.value).toFixed(1)+'x'">
+          </div>
+          <button class="btn btn-block" style="border:1.5px solid var(--purple);color:var(--purple)" onclick="testVoice()"><svg class="icon-sm"><use href="#i-play"/></svg>TEST VOICE</button>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="wizard-step" data-step="5" style="display:none">
+      <div class="module-panel amber">
+        <div class="module-header">
+          <svg class="icon"><use href="#i-bell"/></svg><span class="module-title">NOTIFICATION</span>
+          <label class="toggle amber"><input type="checkbox" id="w-notif-enabled" checked onchange="toggleModule('notif')"><span class="toggle-track"></span></label>
+        </div>
+        <div class="module-body" id="w-notif-body">
+          <div class="toggle-row"><div class="toggle-row-text"><div class="toggle-row-title">Before Event</div><div class="toggle-row-sub">Alert 5 minutes ahead</div></div><label class="toggle amber"><input type="checkbox" id="w-notif-before" checked><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div class="toggle-row-text"><div class="toggle-row-title">At Event</div><div class="toggle-row-sub">Alert the moment it triggers</div></div><label class="toggle amber"><input type="checkbox" id="w-notif-at" checked><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div class="toggle-row-text"><div class="toggle-row-title">After Attempt</div><div class="toggle-row-sub">Alert once the outcome is known</div></div><label class="toggle amber"><input type="checkbox" id="w-notif-after" checked><span class="toggle-track"></span></label></div>
+          <div class="toggle-row"><div class="toggle-row-text"><div class="toggle-row-title">Sound</div></div><label class="toggle amber"><input type="checkbox" id="w-notif-sound" checked><span class="toggle-track"></span></label></div>
+          <div class="toggle-row" style="border-bottom:none"><div class="toggle-row-text"><div class="toggle-row-title">Vibration</div></div><label class="toggle amber"><input type="checkbox" id="w-notif-vibrate" checked><span class="toggle-track"></span></label></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wizard-step" data-step="6" style="display:none">
+      <div class="section-title">Final Review</div>
+      <div class="card" id="w-review-card" style="display:flex;flex-direction:column;gap:13px"></div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <button class="back-btn" id="wiz-back-btn" onclick="wizBack()" style="width:48px;height:48px"><svg class="icon"><use href="#i-chevron-l"/></svg></button>
+    <div id="wiz-actions" style="flex:1;display:flex;gap:10px">
+      <button class="btn btn-primary" style="flex:1" onclick="wizNext()">NEXT</button>
+    </div>
+  </div>
+</div>
+<!-- ============ SCHEDULES / CALLS LIST ============ -->
+<div class="screen" id="screen-calls">
+  <div class="screen-header">
+    <div class="header-row">
+      <button class="back-btn" onclick="nav('screen-dashboard')" aria-label="Back"><svg class="icon"><use href="#i-chevron-l"/></svg></button>
+      <div class="header-title">Schedules</div>
+      <div class="header-spacer"></div>
+      <button class="icon-btn" onclick="resetWizard();nav('screen-add')" aria-label="Add"><svg class="icon"><use href="#i-plus"/></svg></button>
+    </div>
+  </div>
+  <div class="screen-body">
+    <div id="schedules-list"></div>
+  </div>
+</div>
+
+<!-- ============ HISTORY ============ -->
+<div class="screen" id="screen-history">
+  <div class="screen-header">
+    <div class="header-row">
+      <button class="back-btn" onclick="nav('screen-dashboard')" aria-label="Back"><svg class="icon"><use href="#i-chevron-l"/></svg></button>
+      <div class="header-title">History</div>
+    </div>
+  </div>
+  <div class="screen-body">
+    <div class="search-wrap"><svg class="icon icon-sm"><use href="#i-search"/></svg><input class="input" placeholder="Search history" id="history-search" oninput="renderHistory()"></div>
+    <div class="chip-row" id="history-filters">
+      <button class="chip active" onclick="setHistoryFilter(this,'all')">All</button>
+      <button class="chip" onclick="setHistoryFilter(this,'call')">Calls</button>
+      <button class="chip" onclick="setHistoryFilter(this,'voice')">Voice</button>
+      <button class="chip" onclick="setHistoryFilter(this,'ai')">AI</button>
+      <button class="chip" onclick="setHistoryFilter(this,'notif')">Notifications</button>
+      <button class="chip" onclick="setHistoryFilter(this,'date')">Date</button>
+    </div>
+    <div class="card" style="padding:4px 20px" id="history-list"></div>
+  </div>
+</div>
+
+<!-- ============ CONTACTS ============ -->
+<div class="screen" id="screen-contacts">
+  <div class="screen-header">
+    <div class="header-row">
+      <button class="back-btn" onclick="nav('screen-dashboard')" aria-label="Back"><svg class="icon"><use href="#i-chevron-l"/></svg></button>
+      <div class="header-title">Contacts</div>
+    </div>
+  </div>
+  <div class="screen-body">
+    <div class="search-wrap"><svg class="icon icon-sm"><use href="#i-search"/></svg><input class="input" placeholder="Search contacts" id="contacts-search" oninput="renderContacts()"></div>
+    <div class="card" style="padding:4px 20px" id="contacts-list"></div>
+  </div>
+</div>
+
+<!-- ============ MODALS ============ -->
+<div class="modal-overlay" id="modal-timeline" onclick="if(event.target===this) closeModal('modal-timeline')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title-row">
+      <div>
+        <div class="modal-title" id="tl-modal-name">Live Execution</div>
+        <div class="header-sub" id="tl-modal-sub">Timeline</div>
+      </div>
+      <button class="icon-btn" onclick="closeModal('modal-timeline')" aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="timeline" id="tl-modal-body"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-pick-contact" onclick="if(event.target===this) closeModal('modal-pick-contact')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title-row">
+      <div class="modal-title">Pick Contact</div>
+      <button class="icon-btn" onclick="closeModal('modal-pick-contact')" aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="search-wrap" style="margin-bottom:14px">
+      <svg class="icon icon-sm"><use href="#i-search"/></svg>
+      <input class="input" id="pick-contact-search" placeholder="Search contacts by name or number" oninput="renderPickerContacts()">
+    </div>
+    <div id="pick-contact-list"></div>
+  </div>
+</div>
+<!-- ============ VOICE STUDIO ============ -->
+<div class="screen" id="screen-voice">
+  <div class="screen-header">
+    <div class="header-row">
+      <button class="back-btn" onclick="nav('screen-dashboard')" aria-label="Back"><svg class="icon"><use href="#i-chevron-l"/></svg></button>
+      <div><div class="header-title">Voice Studio</div><div class="header-sub">Reusable voice messages</div></div>
+    </div>
+  </div>
+  <div class="screen-body">
+    <div class="section">
+      <div class="section-title">Compose</div>
+      <div class="field">
+        <label class="field-label">Message Text</label>
+        <textarea class="textarea" id="vs-msg" rows="4">Namaste! Yeh ek reminder call hai aapke liye. Dhanyavaad.</textarea>
+      </div>
+      <div class="trio" style="grid-template-columns:1fr 1fr">
+        <div class="field"><label class="field-label">Language</label><select class="select-native" id="vs-lang"><option>Hindi</option><option selected>Hinglish</option><option>English</option></select></div>
+        <div class="field"><label class="field-label">Voice</label><select class="select-native" id="vs-voice"><option>Female &middot; Warm</option><option>Male &middot; Calm</option><option>Female &middot; Clear</option></select></div>
+      </div>
+      <div class="field"><label class="field-label">Speed &middot; <span id="vs-speed-val">1.0x</span></label><input id="vs-speed" type="range" min="0.5" max="2" step="0.1" value="1" style="width:100%;accent-color:var(--purple)" oninput="document.getElementById('vs-speed-val').textContent=parseFloat(this.value).toFixed(1)+'x'"></div>
+      <div class="field"><label class="field-label">Pitch &middot; <span id="vs-pitch-val">1.0</span></label><input id="vs-pitch" type="range" min="0.5" max="1.5" step="0.1" value="1" style="width:100%;accent-color:var(--purple)" oninput="document.getElementById('vs-pitch-val').textContent=parseFloat(this.value).toFixed(1)"></div>
+      <div class="btn-row">
+        <button class="btn btn-block" style="border:1.5px solid var(--purple);color:var(--purple)" onclick="testVoice()"><svg class="icon-sm"><use href="#i-play"/></svg>PREVIEW</button>
+        <button class="btn btn-primary btn-block" onclick="saveVoiceStudio()"><svg class="icon-sm"><use href="#i-check"/></svg>SAVE</button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Message Templates</div>
+      <div class="nav-grid">
+        <button class="nav-tile" onclick="loadVoiceTemplate('Call Reminder')" style="aspect-ratio:auto;padding:14px 6px"><svg class="icon" style="color:var(--purple)"><use href="#i-phone"/></svg><span>CALL REMINDER</span></button>
+        <button class="nav-tile" onclick="loadVoiceTemplate('College')" style="padding:14px 6px"><svg class="icon" style="color:var(--purple)"><use href="#i-bell"/></svg><span>COLLEGE</span></button>
+        <button class="nav-tile" onclick="loadVoiceTemplate('Family')" style="padding:14px 6px"><svg class="icon" style="color:var(--purple)"><use href="#i-users"/></svg><span>FAMILY</span></button>
+        <button class="nav-tile" onclick="loadVoiceTemplate('Work')" style="padding:14px 6px"><svg class="icon" style="color:var(--purple)"><use href="#i-database"/></svg><span>WORK</span></button>
+        <button class="nav-tile" onclick="loadVoiceTemplate('Meeting')" style="padding:14px 6px"><svg class="icon" style="color:var(--purple)"><use href="#i-clock"/></svg><span>MEETING</span></button>
+        <button class="nav-tile" onclick="loadVoiceTemplate('Custom')" style="padding:14px 6px"><svg class="icon" style="color:var(--purple)"><use href="#i-edit"/></svg><span>CUSTOM</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ AI STUDIO ============ -->
+<div class="screen" id="screen-ai">
+  <div class="screen-header">
+    <div class="header-row">
+      <button class="back-btn" onclick="nav('screen-dashboard')" aria-label="Back"><svg class="icon"><use href="#i-chevron-l"/></svg></button>
+      <div><div class="header-title">AI Studio</div><div class="header-sub">Draft and test AI messages</div></div>
+    </div>
+  </div>
+  <div class="screen-body">
+    <div class="section">
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div><div style="font-weight:800">Gemini AI</div><div class="field-hint" style="margin-top:2px">Real API requests · local usage tracker</div></div>
+        <div style="text-align:right"><div class="mono" id="ai-studio-usage">0</div><div class="field-hint" style="margin-top:0">requests today</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Prompt &amp; Instruction</div>
+      <div class="field">
+        <label class="field-label">Prompt</label>
+        <select class="select-native" id="as-prompt" onchange="selectedPromptId=this.value"></select>
+      </div>
+      <textarea class="textarea" id="as-instruction" rows="3" placeholder="e.g. Write a polite reminder for a client meeting tomorrow at 3pm, in English">Remind Papa warmly to take his blood pressure medicine after breakfast, in Hinglish.</textarea>
+      <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="studioGenerateAI()">GENERATE</button>
+    </div>
+    <div class="section">
+      <div class="section-title">AI Result</div>
+      <div class="card">
+        <textarea class="textarea" id="as-result" rows="5" style="border:none;background:transparent;padding:0">Namaste Papa! Yeh ek pyara reminder hai &mdash; breakfast ke baad apni blood pressure ki dawai zaroor lijiyega. Aapka khayal rakhna zaroori hai. Dhanyavaad!</textarea>
+      </div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn btn-outline btn-sm" onclick="toast('Edit the text directly above')"><svg class="icon-sm"><use href="#i-edit"/></svg>EDIT</button>
+        <button class="btn btn-outline btn-sm" onclick="studioGenerateAI()"><svg class="icon-sm"><use href="#i-bot"/></svg>REGENERATE</button>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:10px" onclick="acceptStudioAI()"><svg class="icon-sm"><use href="#i-check"/></svg>ACCEPT</button>
+    </div>
+    <div class="field-hint" style="text-align:center">AI drafts are a starting point &mdash; review before a call goes out. Ordinary calling apps cannot detect who ends a call, remote hold, or third-party recording.</div>
+  </div>
+</div>
+
+<!-- ============ SETTINGS ============ -->
+<div class="screen" id="screen-settings">
+  <div class="screen-header">
+    <div class="header-row">
+      <button class="back-btn" onclick="nav('screen-dashboard')" aria-label="Back"><svg class="icon"><use href="#i-chevron-l"/></svg></button>
+      <div class="header-title">Settings</div>
+      <div class="header-spacer"></div>
+      <button class="icon-btn" onclick="syncFromNative()" aria-label="Refresh"><svg class="icon"><use href="#i-history"/></svg></button>
+    </div>
+  </div>
+  <div class="screen-body">
+    <div class="settings-group">
+      <div class="settings-group-title">Call</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="editSetting('defaultAttempts','Default Attempts','1-50')"><svg class="icon"><use href="#i-phone"/></svg><div class="settings-row-label"><div class="settings-row-title">Default Attempts</div></div><span class="settings-row-val" id="set-default-attempts">5</span><svg class="icon-sm chevron-r"><use href="#i-chevron-r"/></svg></div>
+        <div class="settings-row" onclick="editSetting('defaultRetrySeconds','Default Retry','minutes')"><svg class="icon"><use href="#i-history"/></svg><div class="settings-row-label"><div class="settings-row-title">Default Retry</div></div><span class="settings-row-val" id="set-default-retry">5 min</span><svg class="icon-sm chevron-r"><use href="#i-chevron-r"/></svg></div>
+        <div class="settings-row" style="border-bottom:none" onclick="openExactAlarmSettings()"><svg class="icon"><use href="#i-alert"/></svg><div class="settings-row-label"><div class="settings-row-title">Exact Alarm Access</div><div class="settings-row-sub">Required for precise timing</div></div><span class="badge badge-slate" id="status-exact">Checking</span></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Time</div>
+      <div class="settings-card">
+        <div class="settings-row" style="border-bottom:none"><svg class="icon"><use href="#i-clock"/></svg><div class="settings-row-label"><div class="settings-row-title">Time Format</div><div class="settings-row-sub">Used across schedules, history and execution timeline</div></div><span class="badge badge-cyan">12-hour</span></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Voice</div>
+      <div class="settings-card">
+        <div class="settings-row"><svg class="icon"><use href="#i-wave"/></svg><div class="settings-row-label"><div class="settings-row-title">Language</div></div><div class="segmented" style="width:205px"><button class="segmented-btn" data-setting-lang="Hindi" onclick="setVoiceLanguage(this,'Hindi')">Hindi</button><button class="segmented-btn active" data-setting-lang="Hinglish" onclick="setVoiceLanguage(this,'Hinglish')">Hinglish</button><button class="segmented-btn" data-setting-lang="English" onclick="setVoiceLanguage(this,'English')">English</button></div></div>
+        <div class="settings-row"><svg class="icon"><use href="#i-play"/></svg><div class="settings-row-label"><div class="settings-row-title">Speed</div></div><span class="settings-row-val" id="set-voice-speed">1.0x</span><input id="set-voice-speed-range" type="range" min="0.5" max="2" step="0.1" style="width:105px" oninput="setVoiceSpeed(this.value)"></div>
+        <div class="settings-row"><svg class="icon"><use href="#i-wave"/></svg><div class="settings-row-label"><div class="settings-row-title">Pitch</div></div><span class="settings-row-val" id="set-voice-pitch">1.0</span><input id="set-voice-pitch-range" type="range" min="0.5" max="1.5" step="0.1" style="width:105px" oninput="setVoicePitch(this.value)"></div>
+        <div class="settings-row" style="border-bottom:none"><svg class="icon"><use href="#i-mic"/></svg><div class="settings-row-label"><div class="settings-row-title">TTS Engine</div><div class="settings-row-sub">Uses Android system Text-to-Speech</div></div><span class="badge badge-slate" id="status-tts">Checking</span></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">AI</div>
+      <div class="settings-card">
+        <div class="settings-row"><svg class="icon"><use href="#i-bot"/></svg><div class="settings-row-label"><div class="settings-row-title">AI Enabled</div><div class="settings-row-sub">Controls optional AI connectivity</div></div><label class="toggle"><input id="set-ai-enabled" type="checkbox" onchange="setAIEnabled(this.checked)"><span class="toggle-track"></span></label></div>
+        <div class="settings-row" onclick="configureAI()"><svg class="icon"><use href="#i-database"/></svg><div class="settings-row-label"><div class="settings-row-title">Gemini API Configuration</div><div class="settings-row-sub" id="set-ai-endpoint">Not configured</div></div><span class="badge badge-slate" id="status-ai-config">Not configured</span></div>
+        <div class="settings-row" onclick="testAIConnection()" style="cursor:pointer"><svg class="icon"><use href="#i-check"/></svg><div class="settings-row-label"><div class="settings-row-title">Test Connection</div><div class="settings-row-sub" id="set-ai-test-sub">Checks Gemini access now</div></div><span class="badge badge-slate" id="status-ai">Disabled</span></div>
+        <div class="settings-row"><svg class="icon"><use href="#i-bot"/></svg><div class="settings-row-label"><div class="settings-row-title">Model</div><div class="settings-row-sub">Current Gemini model</div></div><span class="settings-row-val" id="set-ai-model">gemini-2.5-flash-lite</span></div>
+        <div class="settings-row" onclick="editAiLimit()"><svg class="icon"><use href="#i-history"/></svg><div class="settings-row-label"><div class="settings-row-title">Daily Request Guard</div><div class="settings-row-sub">Local safety limit · 0 = off</div></div><span class="settings-row-val" id="set-ai-guard">Off</span><svg class="icon-sm chevron-r"><use href="#i-chevron-r"/></svg></div>
+        <div class="settings-row"><svg class="icon"><use href="#i-database"/></svg><div class="settings-row-label"><div class="settings-row-title">Usage Today</div><div class="settings-row-sub" id="set-ai-usage-sub">Requests started on this device</div></div><span class="badge badge-slate" id="status-ai-usage">0</span></div>
+        <div class="settings-row" style="border-bottom:none" onclick="toast('API keys stay on this device. Provider quota is managed by Google AI Studio.')"><svg class="icon"><use href="#i-shield"/></svg><div class="settings-row-label"><div class="settings-row-title">Privacy &amp; Quota</div><div class="settings-row-sub">Local counter is not the provider quota</div></div><svg class="icon-sm chevron-r"><use href="#i-chevron-r"/></svg></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Administration</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="openAdminPanel()" style="cursor:pointer">
+          <svg class="icon"><use href="#i-shield"/></svg>
+          <div class="settings-row-label">
+            <div class="settings-row-title">Admin Panel</div>
+            <div class="settings-row-sub">Separate secure admin login • prompts &amp; backend</div>
+          </div>
+          <svg class="icon-sm chevron-r"><use href="#i-chevron-r"/></svg>
+        </div>
+        <div class="settings-row" onclick="configurePromptSync()" style="cursor:pointer">
+          <svg class="icon"><use href="#i-database"/></svg>
+          <div class="settings-row-label">
+            <div class="settings-row-title">Admin Catalog URL</div>
+            <div class="settings-row-sub" id="set-prompt-sync-url">Using local catalog</div>
+          </div>
+          <span class="badge badge-slate" id="status-prompt-sync">LOCAL</span>
+        </div>
+        <div class="settings-row" id="prompt-sync-now-row" onclick="syncPromptCatalog()" style="cursor:pointer">
+          <svg class="icon"><use href="#i-check"/></svg>
+          <div class="settings-row-label">
+            <div class="settings-row-title">Sync Prompts Now</div>
+            <div class="settings-row-sub" id="set-prompt-sync-sub">Set an admin catalog URL first</div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <svg class="icon"><use href="#i-history"/></svg>
+          <div class="settings-row-label">
+            <div class="settings-row-title">Last Synced</div>
+          </div>
+          <span class="settings-row-val" id="set-prompt-sync-last">Never</span>
+        </div>
+        <div class="settings-row">
+          <svg class="icon"><use href="#i-database"/></svg>
+          <div class="settings-row-label">
+            <div class="settings-row-title">AI Voice Backend</div>
+            <div class="settings-row-sub" id="set-voice-backend-sub">Uses the Admin Catalog URL above</div>
+          </div>
+          <span class="badge badge-slate" id="status-voice-backend-config">NOT CONFIGURED</span>
+        </div>
+        <div class="settings-row" id="voice-backend-test-row" onclick="testAiVoiceBackend()" style="cursor:pointer">
+          <svg class="icon"><use href="#i-check"/></svg>
+          <div class="settings-row-label">
+            <div class="settings-row-title">Test AI Voice Backend</div>
+            <div class="settings-row-sub" id="set-voice-backend-test-sub">Set an admin/backend URL first</div>
+          </div>
+          <span class="badge badge-slate" id="status-voice-backend">NOT TESTED</span>
+        </div>
+        <div class="settings-row" style="border-bottom:none">
+          <svg class="icon"><use href="#i-history"/></svg>
+          <div class="settings-row-label">
+            <div class="settings-row-title">Last Checked</div>
+          </div>
+          <span class="settings-row-val" id="set-voice-backend-last">Never</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Notifications</div>
+      <div class="settings-card">
+        <div class="settings-row"><svg class="icon"><use href="#i-volume"/></svg><div class="settings-row-label"><div class="settings-row-title">Sound</div></div><label class="toggle amber"><input id="set-notif-sound" type="checkbox" checked onchange="setNotificationSetting('notificationSound',this.checked)"><span class="toggle-track"></span></label></div>
+        <div class="settings-row"><svg class="icon"><use href="#i-vibrate"/></svg><div class="settings-row-label"><div class="settings-row-title">Vibration</div></div><label class="toggle amber"><input id="set-notif-vibrate" type="checkbox" checked onchange="setNotificationSetting('notificationVibrate',this.checked)"><span class="toggle-track"></span></label></div>
+        <div class="settings-row" style="border-bottom:none" onclick="openNotificationSettings()"><svg class="icon"><use href="#i-bell"/></svg><div class="settings-row-label"><div class="settings-row-title">Permission</div><div class="settings-row-sub">Android notification permission</div></div><span class="badge badge-slate" id="status-notifications">Checking</span></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Appearance</div>
+      <div class="settings-card">
+        <div class="settings-row"><div class="settings-row-label"><div class="settings-row-title">Theme</div></div><div class="segmented" style="width:150px"><button id="theme-dark" class="segmented-btn" onclick="setTheme('dark')">Dark</button><button id="theme-light" class="segmented-btn" onclick="setTheme('light')">Light</button></div></div>
+        <div class="settings-row"><div class="settings-row-label"><div class="settings-row-title">Accent Color</div></div><div style="display:flex;gap:8px"><span class="color-dot" data-accent="cyan" style="background:var(--cyan)" onclick="setAccent('cyan')"></span><span class="color-dot" data-accent="purple" style="background:var(--purple)" onclick="setAccent('purple')"></span><span class="color-dot" data-accent="amber" style="background:var(--amber)" onclick="setAccent('amber')"></span><span class="color-dot" data-accent="green" style="background:var(--green)" onclick="setAccent('green')"></span></div></div>
+        <div class="settings-row" style="border-bottom:none"><div class="settings-row-label"><div class="settings-row-title">Font Size</div></div><div class="segmented" style="width:150px"><button id="font-S" class="segmented-btn" onclick="setFontSize('S')">S</button><button id="font-M" class="segmented-btn" onclick="setFontSize('M')">M</button><button id="font-L" class="segmented-btn" onclick="setFontSize('L')">L</button></div></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Security</div>
+      <div class="settings-card">
+        <div class="settings-row"><svg class="icon"><use href="#i-shield"/></svg><div class="settings-row-label"><div class="settings-row-title">App Lock</div><div class="settings-row-sub" id="set-lock-sub">Disabled</div></div><label class="toggle"><input id="set-app-lock" type="checkbox" onchange="setAppLock(this.checked)"><span class="toggle-track"></span></label></div>
+        <div class="settings-row" style="border-bottom:none" onclick="setPin()"><svg class="icon"><use href="#i-shield"/></svg><div class="settings-row-label"><div class="settings-row-title">PIN</div><div class="settings-row-sub" id="set-pin-sub">Not set</div></div><svg class="icon-sm chevron-r"><use href="#i-chevron-r"/></svg></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Data</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="backupData()"><svg class="icon"><use href="#i-database"/></svg><div class="settings-row-label"><div class="settings-row-title">Backup</div><div class="settings-row-sub" id="set-last-backup">Never</div></div><svg class="icon-sm chevron-r"><use href="#i-chevron-r"/></svg></div>
+        <div class="settings-row" onclick="restoreData()"><svg class="icon"><use href="#i-database"/></svg><div class="settings-row-label"><div class="settings-row-title">Restore</div><div class="settings-row-sub">Import schedules, settings and history</div></div><svg class="icon-sm chevron-r"><use href="#i-chevron-r"/></svg></div>
+        <div class="settings-row" style="border-bottom:none" onclick="clearHistory()"><svg class="icon" style="color:var(--red)"><use href="#i-trash"/></svg><div class="settings-row-label"><div class="settings-row-title" style="color:var(--red)">Clear History</div></div><svg class="icon-sm chevron-r"><use href="#i-chevron-r"/></svg></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Device Status</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="requestPermissions()"><svg class="icon"><use href="#i-phone"/></svg><div class="settings-row-label"><div class="settings-row-title">Call Permission</div><div class="settings-row-sub">Tap to request missing Android permissions</div></div><span class="badge badge-slate" id="status-call">Checking</span></div>
+        <div class="settings-row" onclick="requestPermissions()"><svg class="icon"><use href="#i-users"/></svg><div class="settings-row-label"><div class="settings-row-title">Contacts Permission</div><div class="settings-row-sub">Tap to request missing Android permissions</div></div><span class="badge badge-slate" id="status-contacts">Checking</span></div>
+        <div class="settings-row"><svg class="icon"><use href="#i-bell"/></svg><div class="settings-row-label"><div class="settings-row-title">Notification Permission</div></div><span class="badge badge-slate" id="status-notifications-2">Checking</span></div>
+        <div class="settings-row" onclick="openExactAlarmSettings()"><svg class="icon"><use href="#i-alert"/></svg><div class="settings-row-label"><div class="settings-row-title">Exact Alarm Permission</div><div class="settings-row-sub">Needed for precise scheduling</div></div><span class="badge badge-slate" id="status-exact-2">Checking</span></div>
+        <div class="settings-row"><svg class="icon"><use href="#i-mic"/></svg><div class="settings-row-label"><div class="settings-row-title">TTS Available</div></div><span class="badge badge-slate" id="status-tts-2">Checking</span></div>
+        <div class="settings-row"><svg class="icon"><use href="#i-bot"/></svg><div class="settings-row-label"><div class="settings-row-title">AI Service Status</div></div><span class="badge badge-slate" id="status-ai-2">Disabled</span></div>
+        <div class="settings-row" style="border-bottom:none" onclick="openBatterySettings()"><svg class="icon"><use href="#i-battery"/></svg><div class="settings-row-label"><div class="settings-row-title">Battery Optimization</div><div class="settings-row-sub">Allow reliable background scheduling</div></div><span class="badge badge-slate" id="status-battery">Checking</span></div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Diagnostics</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="openDiagnostics()" style="cursor:pointer;border-bottom:none">
+          <svg class="icon"><use href="#i-shield"/></svg>
+          <div class="settings-row-label">
+            <div class="settings-row-title">Call &amp; Background Diagnostics</div>
+            <div class="settings-row-sub">Check alarm, battery, permissions, SIM and device state</div>
+          </div>
+          <span class="badge badge-slate" id="status-diagnostics">CHECK</span>
+          <svg class="icon-sm chevron-r"><use href="#i-chevron-r"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <div class="settings-group-title">Emergency</div>
+      <div class="card" style="border-color:rgba(217,92,92,.4)">
+        <div class="field-hint" style="margin-top:0;margin-bottom:14px">Immediately stop, pause, or resume every scheduled task.</div>
+        <button class="btn btn-danger btn-block" style="margin-bottom:10px" onclick="emergencyStop()"><svg class="icon-sm"><use href="#i-stop"/></svg>STOP ALL</button>
+        <div class="btn-row">
+          <button class="btn btn-outline" style="border-color:var(--amber);color:var(--amber)" onclick="pauseAll()">PAUSE ALL</button>
+          <button class="btn btn-outline" style="border-color:var(--green);color:var(--green)" onclick="resumeAll()">RESUME ALL</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+</div><!-- /app-shell -->
+<div class="modal-overlay" id="modal-diagnostics" onclick="if(event.target===this) closeModal('modal-diagnostics')">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title-row"><div class="modal-title">Call &amp; Background Diagnostics</div><button class="icon-btn" onclick="closeModal('modal-diagnostics')" aria-label="Close"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div id="diagnostics-content"><div class="empty-state" style="padding:20px">Checking...</div></div>
+    <button class="btn btn-outline btn-block" style="margin-top:16px" onclick="openDiagnostics(true)">RECHECK</button>
+
+    <div id="oem-advisory-block" style="display:none;margin-top:16px"></div>
+
+    <div class="settings-group-title" style="margin-top:20px">Execution Trace</div>
+    <div class="field-hint" style="margin-top:-4px;margin-bottom:8px">Real, timestamped stages from the last background pipeline run — this is what actually happened, not a capability check.</div>
+    <div id="trace-content" style="max-height:260px;overflow-y:auto;background:rgba(0,0,0,.25);border-radius:10px;padding:8px 10px"></div>
+    <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="renderExecutionTrace()">REFRESH TRACE</button>
+
+    <div class="settings-group-title" style="margin-top:20px">Run Background Test</div>
+    <div class="field-hint" style="margin-top:-4px">Schedules a REAL call 60 seconds from now through the same pipeline as any schedule, even if you lock the screen right after tapping the button. Use a number that's safe to receive a live test call — your own second line, a voicemail box, or someone who knows this is a test. It will not reuse any existing contact automatically.</div>
+    <div class="field">
+      <label class="field-label">Test Number</label>
+      <input class="input" type="tel" id="diag-test-number" placeholder="+91 00000 00000">
+    </div>
+    <button class="btn btn-primary btn-block" onclick="runBackgroundTestFlow()">RUN BACKGROUND TEST</button>
+    <div class="field-hint" id="diag-test-status" style="margin-top:6px"></div>
+
+    <button class="btn btn-outline btn-block" style="margin-top:20px" onclick="exportDiagnosticLog()">EXPORT DIAGNOSTIC LOG</button>
+  </div>
+</div>
+
+<div class="toast-container"><div class="toast" id="toast">Saved</div></div>
+
+<script>
+const contacts=[];
+let schedules=[];
+let history=[];
+let settings={};
+let deviceStatus={};
+let editingId=0;
+let wizStep=1;
+let wizSeg={'w-second':'00','w-lang':'Hinglish','w-ampm':'AM'};
+let simAccounts=[];
+let selectedSimHandle='';
+let historyFilter='all';
+let nativeReady=false;
+let toastTimer;
+let aiPrompts=[];
+let selectedPromptId='message.generate.v1';
+const wizLabels=['Contact','Date & Time','Call Function','Voice Message','Notification','Final Review'];
+const VOICE_TEMPLATES={
+  'Call Reminder':'Hello, this is a reminder about your upcoming call. Please be available at the scheduled time.',
+  'College':'Namaste! Yeh reminder hai submission ke baare mein, time se pahle submit kar dijiyega.',
+  'Family':'Namaste! Bas ek pyara reminder - thoda time nikal kar family se baat kar lijiyega.',
+  'Work':'Hello, this is a reminder about your scheduled work follow-up. Please review before the call.',
+  'Meeting':'Hello, this is a reminder that your meeting is starting shortly. Please join on time.',
+  'Custom':''
+};
+const BADGE_COLOR={active:'cyan',scheduled:'cyan',running:'cyan',completed:'green',failed:'red',enabled:'purple',off:'slate',delivered:'green',skipped:'slate',on:'amber',sent:'amber',ready:'cyan',stopped:'red',paused:'amber'};
+
+function hasNativeBridge(){return typeof window.NativeBridge!=='undefined';}
+function safeJson(text,fallback){try{return JSON.parse(text);}catch(e){return fallback;}}
+function pad2(n){return String(n).padStart(2,'0');}
+function cap(s){return s?String(s).charAt(0).toUpperCase()+String(s).slice(1):s;}
+function esc(s){return String(s??'').replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
+function statusBadge(kind,label){const cls=BADGE_COLOR[kind]||'slate';return '<span class="badge badge-'+cls+'"><span class="dot dot-'+cls+'"></span>'+esc(label)+'</span>';}
+function emptyState(icon,title,sub){return '<div class="empty-state"><svg class="icon"><use href="#i-'+icon+'"/></svg><div style="color:var(--ivory);font-weight:700;margin-bottom:4px">'+esc(title)+'</div><div style="font-size:12.5px">'+esc(sub)+'</div></div>';}
+function toast(msg){const t=document.getElementById('toast'); if(!t)return; t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(function(){t.classList.remove('show');},2200);}
+function openModal(id){const el=document.getElementById(id);if(el)el.classList.add('show');}
+function closeModal(id){const el=document.getElementById(id);if(el)el.classList.remove('show');}
+function todayISO(){const d=new Date();return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());}
+function formatDateDisplay(iso){const d=new Date(iso+'T00:00:00');const m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return d.getDate()+' '+m[d.getMonth()]+' '+d.getFullYear();}
+function uiDateFromMillis(ms){if(!ms||ms<=0)return '--';const d=new Date(Number(ms));return d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getFullYear();}
+function uiTimeFromMillis(ms){if(!ms||ms<=0)return '--:--:--';const d=new Date(Number(ms));const h24=d.getHours();const h12=(h24%12)||12;const ap=h24<12?'AM':'PM';return pad2(h12)+':'+pad2(d.getMinutes())+':'+pad2(d.getSeconds())+' '+ap;}
+function hour12To24(h,ap){h=Math.max(1,Math.min(12,Number(h)||12));return String(ap||'AM').toUpperCase()==='PM'?(h===12?12:h+12):(h===12?0:h);}
+
+function syncAiPrompts(){
+  if(!hasNativeBridge())return;
+  try{
+    const raw=safeJson(NativeBridge.getAiPromptsJson(),'{}');
+    aiPrompts=Array.isArray(raw.prompts)?raw.prompts:[];
+    ['as-prompt'].forEach(function(id){
+      const el=document.getElementById(id);
+      if(!el)return;
+      const previous=el.value||selectedPromptId;
+      el.innerHTML=aiPrompts.map(function(p){
+        return '<option value="'+esc(p.id)+'">'+esc(p.name)+' · '+esc(p.id)+'</option>';
+      }).join('');
+      if(aiPrompts.some(function(p){return p.id===previous;}))el.value=previous;
+      else if(aiPrompts.length)el.value=aiPrompts[0].id;
+    });
+    const studio=document.getElementById('as-prompt');
+    if(studio&&studio.value)selectedPromptId=studio.value;
+  }catch(e){console.error(e);}
+}
+
+function nav(id){document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});const target=document.getElementById(id);if(!target)return;target.classList.add('active');window.scrollTo(0,0);if(id==='screen-calls')renderSchedules();if(id==='screen-history')renderHistory();if(id==='screen-contacts')renderContacts();if(id==='screen-settings')updateSettingsUI();}
+
+function toggleModule(name){const map={call:['w-call-enabled','w-call-body'],voice:['w-voice-enabled','w-voice-body'],notif:['w-notif-enabled','w-notif-body']};const pair=map[name];if(!pair)return;const on=document.getElementById(pair[0]);const body=document.getElementById(pair[1]);if(on&&body)body.style.display=on.checked?'':'none';}
+function getTimePart(id){const el=document.getElementById(id);if(!el)return 0;const raw='value' in el?el.value:el.textContent;return parseInt(raw,10)||0;}
+function setTimePart(id,value){const el=document.getElementById(id);if(!el)return;const out=pad2(value);if('value' in el)el.value=out;else el.textContent=out;}
+function normalizeTimeInput(id,min,max,strict){const el=document.getElementById(id);if(!el)return;let raw=String(el.value??'').replace(/\D/g,'').slice(0,2);if(raw===''){if(strict){setTimePart(id,min);}updateSelectedTimeUI();return;}let n=parseInt(raw,10);if(!Number.isFinite(n)){if(strict)setTimePart(id,min);updateSelectedTimeUI();return;}if(strict){n=Math.max(min,Math.min(max,n));setTimePart(id,n);}else if(raw.length>=2){n=Math.max(min,Math.min(max,n));setTimePart(id,n);}updateSelectedTimeUI();}
+function stepVal(id,delta,min,max){const el=document.getElementById(id);if(!el)return;let v=getTimePart(id)+delta;v=Math.max(min,Math.min(max,v));if(id==='w-hour'||id==='w-minute'||id==='w-second')setTimePart(id,v);else el.textContent=String(v);if(id.indexOf('w-retry-')===0)enforceMinRetry();if(id.indexOf('w-')===0)updateSelectedTimeUI();}
+function enforceMinRetry(){const h=parseInt(document.getElementById('w-retry-h').textContent)||0;const m=parseInt(document.getElementById('w-retry-m').textContent)||0;const sEl=document.getElementById('w-retry-s');let s=parseInt(sEl.textContent)||0;if(h===0&&m===0&&s<20)sEl.textContent='20';}
+function setSeg(el,group,value){el.parentElement.querySelectorAll('.segmented-btn').forEach(function(b){b.classList.remove('active');});el.classList.add('active');wizSeg[group]=value;if(group==='w-ampm'||group==='w-second'||group==='w-lang')updateSelectedTimeUI();}
+function toggleDay(el){el.classList.toggle('active');}
+function toggleRepeatDays(){const val=(document.getElementById('w-recurrence')||{}).value||'ONCE';const wrap=document.getElementById('w-repeat-days-wrap');if(wrap)wrap.style.display=val==='WEEKLY'?'':'none';}
+
+function resetWizard(){wizStep=1;editingId=0;window.acmExecutionMode='NORMAL_SIM';['w-phone'].forEach(function(id){const el=document.getElementById(id);if(el)el.value='';});setNowTime(true);wizSeg['w-lang']=settings.voiceLanguage||'Hinglish';document.getElementById('w-recurrence').value='ONCE';document.querySelectorAll('#w-repeat-days .chip').forEach(function(x){x.classList.remove('active');});toggleRepeatDays();document.querySelectorAll('#w-voice-body .segmented-btn').forEach(function(b){b.classList.toggle('active',b.textContent.trim()===(settings.voiceLanguage||'Hinglish'));});document.querySelectorAll('#w-am, #w-pm').forEach(function(b){b.classList.toggle('active',b.textContent.trim()===(wizSeg['w-ampm']||'AM'));});setTimePart('w-second',Number(wizSeg['w-second']||0));document.getElementById('w-attempts').textContent=String(settings.defaultAttempts||5);let retry=Math.max(20,Number(settings.defaultRetrySeconds||300));document.getElementById('w-retry-h').textContent=String(Math.floor(retry/3600));document.getElementById('w-retry-m').textContent=String(Math.floor((retry%3600)/60));document.getElementById('w-retry-s').textContent=String(retry%60);['w-call-enabled','w-voice-enabled','w-notif-enabled','w-notif-before','w-notif-at','w-notif-after'].forEach(function(id){const el=document.getElementById(id);if(el)el.checked=true;});const msg=document.getElementById('w-voice-msg');if(msg)msg.value='Namaste! Yeh ek reminder call hai aapke liye. Dhanyavaad.';const vs=document.getElementById('w-voice-select');if(vs)vs.selectedIndex=0;const ws=document.getElementById('w-speed');const wsv=document.getElementById('w-speed-val');if(ws){ws.value=Number(settings.voiceSpeed||1);if(wsv)wsv.textContent=Number(ws.value).toFixed(1)+'x';}const simToggle=document.getElementById('w-sim-enabled');if(simToggle)simToggle.checked=false;selectedSimHandle='';renderSimSelector();renderWizardStep();}
+function renderWizardStep(){document.querySelectorAll('.wizard-step').forEach(function(s){s.style.display=parseInt(s.dataset.step,10)===wizStep?'':'none';});document.getElementById('wiz-step-label').textContent='Step '+wizStep+' of 6 · '+wizLabels[wizStep-1];document.querySelectorAll('.wizard-dot').forEach(function(d){const n=parseInt(d.dataset.d,10);d.classList.toggle('done',n<wizStep);d.classList.toggle('active',n===wizStep);});document.getElementById('wiz-back-btn').style.visibility=wizStep===1?'hidden':'visible';const actions=document.getElementById('wiz-actions');if(wizStep===6){renderReview();actions.innerHTML='<button class="btn btn-outline" style="flex:1" onclick="saveSchedule(false)">SAVE SCHEDULE</button><button class="btn btn-primary" style="flex:1" onclick="saveSchedule(true)">SAVE &amp; ACTIVATE</button>';}else{actions.innerHTML='<button class="btn btn-primary" style="flex:1" onclick="wizNext()">'+(wizStep===5?'REVIEW':'NEXT')+'</button>';}if(wizStep===2)updateSelectedTimeUI();}
+function wizNext(){if(wizStep===2){normalizeTimeInput('w-hour',1,12,true);normalizeTimeInput('w-minute',0,59,true);normalizeTimeInput('w-second',0,59,true);if(!validateSelectedTime())return;}if(wizStep<6){wizStep++;renderWizardStep();}}
+function wizBack(){if(wizStep>1){wizStep--;renderWizardStep();}}
+
+function startNativeAI(instruction,targetId,promptId){const i=String(instruction||'').trim();if(!i){toast('Add an instruction first');return;}if(!hasNativeBridge()){toast('AI requires the Android app');return;}if(!settings.aiEnabled){toast('Enable AI in Settings first');return;}if(!settings.aiConfigured){toast('Configure Gemini API key first');nav('screen-settings');return;}const chosen=String(promptId||selectedPromptId||'message.generate.v1');window.aiActiveRequest='';window.aiActiveTarget=targetId;const r=safeJson(NativeBridge.generateAIWithPrompt(chosen,i),null);if(r&&r.ok){window.aiActiveRequest=r.requestId||'';selectedPromptId=r.promptId||chosen;toast('Gemini request started…');}else toast((r&&r.message)||'AI request failed to start');}
+function studioGenerateAI(){const i=document.getElementById('as-instruction').value.trim();const p=(document.getElementById('as-prompt')||{}).value||selectedPromptId;startNativeAI(i,'as-result',p);}
+function acceptStudioAI(){const text=document.getElementById('as-result').value.trim();if(!text){toast('Generate a message first');return;}localStorage.setItem('acm_last_ai_message',text);if(document.getElementById('w-voice-msg'))document.getElementById('w-voice-msg').value=text;toast('AI message accepted and saved');}
+function onNativeAiResult(serialized){const p=safeJson(serialized,null);if(!p)return;if(window.aiActiveRequest&&p.requestId!==window.aiActiveRequest)return;const target=document.getElementById(window.aiActiveTarget||'');if(p.ok&&target){target.value=p.text||'';toast('Gemini message generated');}else{toast('AI '+String(p.status||'ERROR').replace(/_/g,' ').toLowerCase()+': '+(p.error||'request failed'));}settings.aiStatus=p.status||settings.aiStatus;deviceStatus.aiStatus=p.status||deviceStatus.aiStatus;if(p.promptId)selectedPromptId=p.promptId;settings.aiLastError=p.error||'';settings.aiRequestsToday=Number(p.requestsToday||settings.aiRequestsToday||0);settings.aiLocalDailyLimit=Number(p.localDailyLimit||settings.aiLocalDailyLimit||0);settings.aiLocalRemaining=Number(p.localRemaining||settings.aiLocalRemaining||-1);updateSettingsUI();}
+function requestPermissions(){if(!hasNativeBridge()){toast('Android permissions unavailable in preview');return;}const r=safeJson(NativeBridge.requestPermissions(),null);toast((r&&r.message)||'Permission request started');setTimeout(syncFromNative,700);}
+function editAiLimit(){const current=Number(settings.aiLocalDailyLimit||0);const v=prompt('Local daily AI request guard (0 = off)',String(current));if(v===null)return;const n=parseInt(v,10);if(!Number.isFinite(n)||n<0||n>100000){toast('Enter a value from 0 to 100000');return;}NativeSet('aiLocalDailyLimit',String(n));}
+function loadVoiceTemplate(name){if(name==='Custom'){const custom=localStorage.getItem('acm_custom_voice')||localStorage.getItem('acm_last_ai_message')||'';document.getElementById('vs-msg').value=custom;toast(custom?'Custom template loaded':'No custom template saved');return;}document.getElementById('vs-msg').value=VOICE_TEMPLATES[name]||'';toast(name+' template loaded');}
+function saveVoiceStudio(){const msg=document.getElementById('vs-msg').value.trim();if(!msg){toast('Enter a message first');return;}localStorage.setItem('acm_custom_voice',msg);localStorage.setItem('acm_custom_voice_lang',document.getElementById('vs-lang').value);localStorage.setItem('acm_custom_voice_speed',document.getElementById('vs-speed').value);localStorage.setItem('acm_custom_voice_pitch',document.getElementById('vs-pitch').value);toast('Voice template saved');}
+function testVoice(){const addScreen=document.getElementById('screen-add');const useWizard=addScreen&&addScreen.classList.contains('active');const el=document.getElementById(useWizard?'w-voice-msg':'vs-msg');if(!el||!el.value.trim()){toast('Enter a message first');return;}if(hasNativeBridge()){const lang=useWizard?(wizSeg['w-lang']||settings.voiceLanguage||'Hinglish'):(document.getElementById('vs-lang').value||settings.voiceLanguage||'Hinglish');const speed=useWizard?parseFloat(document.getElementById('w-speed').value||settings.voiceSpeed||1):parseFloat(document.getElementById('vs-speed').value||settings.voiceSpeed||1);const pitch=useWizard?Number(settings.voicePitch||1):parseFloat(document.getElementById('vs-pitch').value||settings.voicePitch||1);const r=safeJson(NativeBridge.previewVoice(el.value.trim(),lang,String(speed),String(pitch)),null);if(r)toast(r.message||'Playing voice preview');}else toast('Native TTS unavailable in preview');}
+
+function renderReview(){const phone=document.getElementById('w-phone').value||'Not set';const date=document.getElementById('w-date').value||todayISO();const hh=pad2(getTimePart('w-hour'));const mm=pad2(getTimePart('w-minute'));const ss=pad2(getTimePart('w-second')); const rh=document.getElementById('w-retry-h').textContent,rm=document.getElementById('w-retry-m').textContent,rs=document.getElementById('w-retry-s').textContent;const rec=document.getElementById('w-recurrence').value;const days=Array.from(document.querySelectorAll('#w-repeat-days .chip.active')).map(function(x){return x.dataset.day;});const simOn=!!document.getElementById('w-sim-enabled')?.checked;const simLabel=simOn?((simAccounts.find(function(x){return x.handleId===selectedSimHandle;})||{}).label||'Specific SIM'):'Default outgoing SIM';const rows=[['Contact',phone],['Date',formatDateDisplay(date)],['Time',hh+':'+mm+':'+ss+' '+(wizSeg['w-ampm']||'AM')],['Recurrence',rec+(rec==='WEEKLY'&&days.length?' · '+days.join(','):'')],['Call',document.getElementById('w-call-enabled').checked?(document.getElementById('w-attempts').textContent+' attempts · retry '+rh+'h '+rm+'m '+rs+'s'):'Disabled'],['Mode',String(window.acmExecutionMode||'NORMAL_SIM')],['Timezone',String(Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC')],['SIM',simLabel],['Voice',document.getElementById('w-voice-enabled').checked?'Enabled · '+wizSeg['w-lang']+' · '+Number(document.getElementById('w-speed').value||1).toFixed(1)+'x':'Disabled'],['Notification',document.getElementById('w-notif-enabled').checked?'Enabled':'Disabled']];document.getElementById('w-review-card').innerHTML=rows.map(function(r){return '<div style="display:flex;justify-content:space-between;gap:14px"><span class="muted" style="font-size:13px">'+esc(r[0])+'</span><span style="font-weight:700;text-align:right;font-size:13.5px">'+esc(r[1])+'</span></div>';}).join('');}
+
+function setCallMode(mode){window.acmExecutionMode=mode==='AI_VOICE'?'AI_VOICE':'NORMAL_SIM';document.querySelectorAll('#w-call-mode .segmented-btn').forEach(function(b){b.classList.toggle('active',(b.textContent||'').trim()===(window.acmExecutionMode==='AI_VOICE'?'AI VOICE':'NORMAL SIM'));});const sim=document.getElementById('w-sim-section');if(sim)sim.style.display=window.acmExecutionMode==='AI_VOICE'?'none':((simAccounts||[]).length>1?'':'none');}
+function buildNativePayload(activate){const phone=document.getElementById('w-phone').value.trim();const current=editingId?schedules.find(function(x){return x.id===editingId;}):null;const name=current?(current.name||current.number||''):'';const date=document.getElementById('w-date').value||todayISO();const hour12=getTimePart('w-hour');const minute=getTimePart('w-minute');const second=getTimePart('w-second') || Number(wizSeg['w-second']||'00');const ampm=String(wizSeg['w-ampm']||'AM').toUpperCase();const hour=hour12To24(hour12,ampm);const retry=Number(document.getElementById('w-retry-h').textContent)*3600+Number(document.getElementById('w-retry-m').textContent)*60+Number(document.getElementById('w-retry-s').textContent);const messageText=document.getElementById('w-voice-msg').value.trim();const triggerAt=new Date(date+'T'+pad2(hour)+':'+pad2(minute)+':'+pad2(second)).getTime();const simEnabled=!!document.getElementById('w-sim-enabled')?.checked;const selected=simEnabled?simAccounts.find(function(x){return (x.handleKey||x.handleId)===selectedSimHandle;}):null;return{id:editingId||0,number:phone,contactName:name,triggerAt:triggerAt,maxAttempts:Number(document.getElementById('w-attempts').textContent),retryIntervalSeconds:Math.max(20,retry||20),callEnabled:document.getElementById('w-call-enabled').checked,voiceEnabled:document.getElementById('w-voice-enabled').checked,messageEnabled:false,notificationEnabled:document.getElementById('w-notif-enabled').checked,notifyBefore:document.getElementById('w-notif-before').checked,notifyAt:document.getElementById('w-notif-at').checked,notifyAfter:document.getElementById('w-notif-after').checked,messageText:messageText,voiceLanguage:wizSeg['w-lang']||settings.voiceLanguage||'Hinglish',voiceSpeed:Number(document.getElementById('w-speed').value||settings.voiceSpeed||1),voicePitch:Number(settings.voicePitch||1),groupName:current?(current.group||''):'' ,recurrence:document.getElementById('w-recurrence').value,repeatDays:Array.from(document.querySelectorAll('#w-repeat-days .chip.active')).map(function(x){return Number(x.dataset.day);}),timeSlots:[hour*60+minute],simSelectionEnabled:simEnabled&&!!selected,phoneAccountId:selected?selected.handleId:'',phoneAccountComponent:selected?selected.component:'',phoneAccountLabel:selected?selected.label:'',executionMode:window.acmExecutionMode||'NORMAL_SIM',timezoneId:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',activate:!!activate,existingId:current?current.id:0};}
+
+function saveSchedule(activate){const p=buildNativePayload(activate);if(!p.number){toast('Add a phone number first');return;}if(!Number.isFinite(p.triggerAt)||p.triggerAt<=Date.now()){toast('Choose a future date/time');return;}if(p.recurrence==='WEEKLY'&&!p.repeatDays.length){toast('Select at least one weekday');return;}if(!hasNativeBridge()){toast('Native scheduler unavailable');return;}const r=safeJson(NativeBridge.saveSchedule(JSON.stringify(p),String(activate),String(editingId||0)),null);toast((r&&r.message)||'Save failed');if(r&&r.ok){editingId=0;syncFromNative();nav('screen-calls');}}
+
+function toUiSchedule(t){const when=Number(t.nextTrigger)>0?Number(t.nextTrigger):Number(t.triggerAt);const st=String(t.status||'Stopped');let status=st==='Scheduled'?'scheduled':st==='Paused'?'paused':st==='Running'?'running':st==='Stopped'?'stopped':st.toLowerCase();return{id:Number(t.id),name:t.contactName||t.number||'Unnamed Contact',number:t.number||'',group:t.groupName||'',date:uiDateFromMillis(when),dateIso:when?new Date(when).getFullYear()+'-'+pad2(new Date(when).getMonth()+1)+'-'+pad2(new Date(when).getDate()):todayISO(),time:uiTimeFromMillis(when),attempt:Number(t.attemptCount||0),attemptsMax:Number(t.maxAttempts||1),call:t.callEnabled?(status==='scheduled'?'scheduled':(status==='paused'?'paused':(status==='running'?'running':'off'))):'off',voice:t.voiceEnabled?'enabled':'off',ai:t.messageEnabled?'enabled':'off',notif:t.notificationEnabled?'on':'off',status:status,triggerAt:Number(t.triggerAt||0),nextTrigger:Number(t.nextTrigger||-1),callEnabled:!!t.callEnabled,voiceEnabled:!!t.voiceEnabled,messageEnabled:!!t.messageEnabled,notificationEnabled:!!t.notificationEnabled,notifyBefore:!!t.notifyBefore,notifyAt:!!t.notifyAt,notifyAfter:!!t.notifyAfter,messageText:t.messageText||'',promptId:String(t.promptId||'message.generate.v1'),promptVersion:Number(t.promptVersion||1),voiceLanguage:String(t.voiceLanguage||settings.voiceLanguage||'Hinglish'),voiceSpeed:Number(t.voiceSpeed||settings.voiceSpeed||1),voicePitch:Number(t.voicePitch||settings.voicePitch||1),retryIntervalSeconds:Number(t.retryIntervalSeconds||20),recurrence:String(t.recurrence||'ONCE'),repeatDays:Array.isArray(t.repeatDays)?t.repeatDays:[],timeSlots:Array.isArray(t.timeSlots)?t.timeSlots:[],liveStatus:String(t.liveStatus||'Waiting'),lastResult:String(t.lastResult||'NOT_STARTED'),simSelectionEnabled:!!t.simSelectionEnabled,phoneAccountId:String(t.phoneAccountId||''),phoneAccountComponent:String(t.phoneAccountComponent||''),phoneAccountLabel:String(t.phoneAccountLabel||''),executionMode:String(t.executionMode||'NORMAL_SIM'),timezoneId:String(t.timezoneId||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC')};}
+function syncFromNative(){if(!hasNativeBridge())return;try{syncAiPrompts();schedules=safeJson(NativeBridge.getTasksJson(),'[]').map(toUiSchedule);const rawContacts=safeJson(NativeBridge.getContactsJson(),'[]');contacts.length=0;rawContacts.forEach(function(c){contacts.push(c);});const rawHistory=safeJson(NativeBridge.getHistoryJson(),'[]');history=rawHistory.map(function(h){const type=String(h.eventType||'EVENT').toUpperCase();const res=String(h.result||'');return{time:h.time?uiDateFromMillis(Number(h.time))+' · '+uiTimeFromMillis(Number(h.time)):'--',name:h.contactName||h.number||'Unknown',attempt:String(h.attempt||0)+'/'+String(h.maxAttempts||0),call:type.indexOf('CALL')===0?res:'Not enabled',voice:type==='VOICE'?res:'Not enabled',ai:type==='MESSAGE'?res:'Not enabled',state:h.liveStatus||'UNKNOWN',type:[type.indexOf('CALL')===0?'call':(type==='NOTIFICATION'?'notif':type.toLowerCase())],rawType:type,rawResult:res,rawTime:Number(h.time||0),source:String(h.source||'SCHEDULED').toUpperCase()};});settings=safeJson(NativeBridge.getSettingsJson(),'{}');deviceStatus=safeJson(NativeBridge.getDeviceStatusJson(),'{}');simAccounts=safeJson(NativeBridge.getSimAccountsJson(),'[]');nativeReady=true;updateDashboard();renderSchedules();renderHistory();renderContacts();updateSettingsUI();renderSimSelector();}catch(e){console.error(e);toast('Native data sync failed');}}
+
+function todayStartMillis(){const d=new Date();d.setHours(0,0,0,0);return d.getTime();}
+function updateDeviceClock(){const now=new Date();const h=now.getHours(),h12=(h%12)||12,ap=h<12?'AM':'PM';const text=pad2(h12)+':'+pad2(now.getMinutes())+':'+pad2(now.getSeconds())+' '+ap;const el=document.getElementById('w-now-clock');if(el)el.textContent=text;}
+function currentTimeParts(){const now=new Date();const h=now.getHours();return{date:todayISO(),hour12:(h%12)||12,minute:now.getMinutes(),second:now.getSeconds(),ampm:h<12?'AM':'PM'};}
+function setNowTime(initial){const p=currentTimeParts();const d=document.getElementById('w-date');if(d)d.value=p.date;setTimePart('w-hour',p.hour12);setTimePart('w-minute',p.minute);setTimePart('w-second',p.second);wizSeg['w-second']=pad2(p.second);wizSeg['w-ampm']=p.ampm;document.querySelectorAll('#w-am,#w-pm').forEach(function(b){b.classList.toggle('active',b.textContent.trim()===p.ampm);});if(!initial)toast('Time set to current device time');updateSelectedTimeUI();}
+function adjustSelectedMinutes(delta){const date=document.getElementById('w-date').value||todayISO();const h=hour12To24(getTimePart('w-hour'),wizSeg['w-ampm']||'AM');const m=getTimePart('w-minute');const s=getTimePart('w-second');const dt=new Date(date+'T'+pad2(h)+':'+pad2(m)+':'+pad2(s));if(Number.isNaN(dt.getTime())){setNowTime(false);return;}dt.setMinutes(dt.getMinutes()+delta);const nh=dt.getHours();setTimePart('w-hour',(nh%12)||12);setTimePart('w-minute',dt.getMinutes());setTimePart('w-second',dt.getSeconds());wizSeg['w-second']=pad2(dt.getSeconds());wizSeg['w-ampm']=nh<12?'AM':'PM';document.querySelectorAll('#w-am,#w-pm').forEach(function(b){b.classList.toggle('active',b.textContent.trim()===wizSeg['w-ampm']);});const d=document.getElementById('w-date');if(d)d.value=dt.getFullYear()+'-'+pad2(dt.getMonth()+1)+'-'+pad2(dt.getDate());updateSelectedTimeUI();}
+function formattedSelectedTime(){const h=pad2(getTimePart('w-hour')||12),m=pad2(getTimePart('w-minute')),s=pad2(getTimePart('w-second'));return h+':'+m+':'+s+' '+(wizSeg['w-ampm']||'AM');}
+function selectedTriggerMillis(){const date=document.getElementById('w-date').value||todayISO();const h=hour12To24(getTimePart('w-hour'),wizSeg['w-ampm']||'AM');const m=getTimePart('w-minute'),s=getTimePart('w-second');return new Date(date+'T'+pad2(h)+':'+pad2(m)+':'+pad2(s)).getTime();}
+function validateSelectedTime(){const el=document.getElementById('w-time-validity');const target=selectedTriggerMillis();const now=Date.now();const date=document.getElementById('w-date').value||todayISO();if(!Number.isFinite(target)){if(el){el.className='badge badge-red';el.textContent='Invalid';}return false;}if(target<=now && date===todayISO()){if(el){el.className='badge badge-red';el.textContent='Past time';}toast('Selected time has already passed');return false;}if(el){el.className='badge badge-green';el.textContent='Ready';}return true;}
+function updateSelectedTimeUI(){updateDeviceClock();const out=document.getElementById('w-selected-time');if(out)out.textContent=formattedSelectedTime();const el=document.getElementById('w-time-validity');let valid=false;const target=selectedTriggerMillis();if(el&&Number.isFinite(target)){if(target<=Date.now()){el.className='badge badge-red';el.textContent='Past time';}else{el.className='badge badge-green';el.textContent='Ready';valid=true;}}const next=document.querySelector('#wiz-actions .btn-primary');if(next&&wizStep===2){next.disabled=!valid;next.style.opacity=valid?'1':'.55';}}
+function updateDashboard(){
+  const now=Date.now();
+  const active=schedules.filter(function(s){return s.status==='scheduled'||s.status==='running';});
+  const paused=schedules.filter(function(s){return s.status==='paused';});
+  const startToday=todayStartMillis(), endToday=startToday+86400000;
+  const terminalToday=history.filter(function(h){
+    const ms=Number(h.rawTime||h.timeMs||0);
+    const r=String(h.rawResult||'');
+    return ms>=startToday&&ms<endToday&&h.rawType==='CALL_STATE'&&/CALL_CONNECTED_ENDED|CALL_OFFHOOK_ENDED|CALL_NO_ANSWER|CALL_NO_ANSWER_TIMEOUT|CALL_ENDED_WITHOUT_CONNECT|CALL_ENDED_WITHOUT_OFFHOOK|CALL_RESULT_TIMEOUT|FAILED|ERROR/.test(r);
+  });
+  const successToday=terminalToday.filter(function(h){return String(h.rawResult||'')==='CALL_CONNECTED_ENDED'||String(h.rawResult||'')==='CALL_OFFHOOK_ENDED';}).length;
+  const failedToday=terminalToday.length-successToday;
+  const pending=active.filter(function(s){return s.status==='scheduled'&&Number(s.nextTrigger||s.triggerAt)>now;}).length;
+  document.getElementById('dash-active-count').textContent=String(active.length);
+  document.getElementById('dash-today-count').textContent=String(terminalToday.length);
+  document.getElementById('dash-success-count').textContent=String(successToday);
+  document.getElementById('dash-failed-count').textContent=String(failedToday);
+  document.getElementById('dash-pending-count').textContent=String(pending);
+  document.getElementById('dash-voice-count').textContent=String(schedules.filter(function(s){return s.voiceEnabled;}).length);
+  document.getElementById('dash-ai-count').textContent=String(schedules.filter(function(s){return s.messageEnabled;}).length);
+  document.getElementById('dash-history-count').textContent=String(history.length);
+
+  const rate=terminalToday.length?Math.round((successToday/terminalToday.length)*100):0;
+  const rateEl=document.getElementById('dash-success-rate');
+  if(rateEl)rateEl.textContent=rate+'% success';
+  const bar=document.getElementById('dash-success-progress');
+  if(bar)bar.style.width=rate+'%';
+  const summary=document.getElementById('dash-today-summary');
+  if(summary)summary.textContent=terminalToday.length+' completed call outcomes · '+pending+' pending';
+  const sync=document.getElementById('dash-last-sync');
+  if(sync)sync.textContent='Updated '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+  const recent=document.getElementById('dash-recent-list');
+  if(recent){
+    const recentItems=history.slice().sort(function(a,b){return Number(b.rawTime||0)-Number(a.rawTime||0);}).slice(0,5);
+    if(recentItems.length){
+      recent.innerHTML=recentItems.map(function(h){
+        const result=String(h.rawResult||h.state||'EVENT');
+        const ok=result==='CALL_CONNECTED_ENDED'||result==='CALL_OFFHOOK_ENDED'||/COMPLETED|SUCCESS/.test(result);
+        const failed=/NO_ANSWER|WITHOUT_CONNECT|TIMEOUT|FAILED|ERROR/.test(result);
+        const icon=failed?'alert':(ok?'check':'clock');
+        const stateClass=failed?'badge-red':(ok?'badge-green':'badge-cyan');
+        return '<div class="recent-row">'+
+          '<div class="recent-icon '+stateClass+'"><svg class="icon-sm"><use href="#i-'+icon+'"/></svg></div>'+
+          '<div class="recent-info"><div class="recent-name">'+esc(h.name||'Unknown')+'</div>'+
+          '<div class="recent-sub">'+esc(h.rawType||((h.type||[])[0])||'EVENT')+' · '+esc(result)+'</div></div>'+
+          '<div class="recent-time mono">'+esc(h.time||'')+'</div></div>';
+      }).join('');
+    }else recent.innerHTML='<div class="empty-state" style="padding:20px">No recent activity</div>';
+  }
+
+  const upcoming=schedules.filter(function(s){return s.status==='scheduled'&&Number(s.nextTrigger||s.triggerAt)>now;}).sort(function(a,b){return Number(a.nextTrigger||a.triggerAt)-Number(b.nextTrigger||b.triggerAt);})[0];
+  const name=document.getElementById('ne-name'),num=document.getElementById('ne-number'),date=document.getElementById('ne-date'),time=document.getElementById('ne-time'),badge=document.getElementById('ne-badge');
+  if(upcoming){name.textContent=upcoming.name;num.textContent=upcoming.number;date.textContent=upcoming.date;time.textContent=upcoming.time;badge.className='badge badge-cyan';badge.innerHTML='<span class="dot dot-cyan"></span>Scheduled';window.nativeCountdownTarget=Number(upcoming.nextTrigger||upcoming.triggerAt);}else{name.textContent='No scheduled events';num.textContent=paused.length?'All schedules paused':'Create a schedule to begin';date.textContent='--';time.textContent='--:--:--';badge.className='badge badge-slate';badge.innerHTML='<span class="dot dot-slate"></span>Idle';window.nativeCountdownTarget=0;}
+  const headline=document.getElementById('dash-system-headline'),pill=document.getElementById('dash-system-pill'),callReady=document.getElementById('dash-call-ready');
+  if(callReady){const ready=!!deviceStatus.callEngineReady;callReady.textContent=ready?'READY':'ACTION NEEDED';callReady.style.color=ready?'var(--green)':'var(--amber)';}
+  if(settings.pausedAll){headline.textContent='Schedules are paused';pill.innerHTML='<span class="live-dot"></span>PAUSED';pill.style.color='var(--amber)';}
+  else if(deviceStatus.callEngineReady===false){headline.textContent=deviceStatus.callEngineReason||'Scheduled call engine needs attention';pill.innerHTML='<span class="live-dot"></span>ACTION NEEDED';pill.style.color='var(--amber)';}
+  else {headline.textContent='Scheduled call engine ready';pill.innerHTML='<span class="live-dot"></span>System Ready';pill.style.color='';}
+  tickCountdown();
+}
+function updateLiveState(){const el=document.getElementById('dash-live-state');if(el&&hasNativeBridge()){try{el.textContent=NativeBridge.getCallState();}catch(e){}}}
+function tickCountdown(){const target=Number(window.nativeCountdownTarget||0),diff=target>0?Math.max(0,Math.floor((target-Date.now())/1000)):0;const el=document.getElementById('ne-countdown');if(el)el.textContent=target>0?pad2(Math.floor(diff/3600))+':'+pad2(Math.floor((diff%3600)/60))+':'+pad2(diff%60):'--:--:--';}
+
+function renderSchedules(){const wrap=document.getElementById('schedules-list');if(!schedules.length){wrap.innerHTML=emptyState('phone','No schedules yet','Tap Add Schedule to create your first one.');return;}wrap.innerHTML=schedules.map(function(s){return '<div class="schedule-card"><div class="sc-top"><div><div class="sc-name">'+esc(s.name)+'</div><div class="sc-num">'+esc(s.number)+'</div>'+(s.group?'<div class="sc-group">'+esc(s.group)+'</div>':'')+(s.simSelectionEnabled&&s.phoneAccountLabel?'<div class="sc-group" style="color:var(--amber)">'+esc(s.phoneAccountLabel)+'</div>':'')+'</div>'+statusBadge(s.status,cap(s.status))+'</div><div class="sc-grid"><div class="sc-cell"><div class="sc-cell-label">Date</div><div class="sc-cell-val">'+esc(s.date)+'</div></div><div class="sc-cell"><div class="sc-cell-label">Time</div><div class="sc-cell-val">'+esc(s.time)+'</div></div><div class="sc-cell"><div class="sc-cell-label">Attempt</div><div class="sc-cell-val">'+s.attempt+'/'+s.attemptsMax+'</div></div></div><div class="sc-status-row">'+statusBadge(s.call,'Call: '+cap(s.call))+' '+statusBadge(s.voice,'Voice: '+cap(s.voice))+' '+statusBadge(s.notif,'Notify: '+cap(s.notif))+'</div><div class="sc-actions"><button class="sc-act" onclick="scheduleAction('+s.id+',\'start\')"><svg class="icon-sm"><use href="#i-play"/></svg><span>START</span></button><button class="sc-act" onclick="scheduleAction('+s.id+',\'stop\')"><svg class="icon-sm"><use href="#i-stop"/></svg><span>STOP</span></button><button class="sc-act" onclick="scheduleAction('+s.id+',\'edit\')"><svg class="icon-sm"><use href="#i-edit"/></svg><span>EDIT</span></button><button class="sc-act" onclick="scheduleAction('+s.id+',\'message\')"><svg class="icon-sm"><use href="#i-message"/></svg><span>MSG</span></button><button class="sc-act" onclick="scheduleAction('+s.id+',\'dialer\')"><svg class="icon-sm"><use href="#i-dialer"/></svg><span>DIAL</span></button><button class="sc-act" onclick="scheduleAction('+s.id+',\'callnow\')"><svg class="icon-sm"><use href="#i-phone"/></svg><span>CALL</span></button><button class="sc-act" style="color:var(--red)" onclick="scheduleAction('+s.id+',\'delete\')"><svg class="icon-sm"><use href="#i-trash"/></svg><span>DEL</span></button></div><div class="sc-timeline-link" onclick="openTimeline('+s.id+')"><svg class="icon-sm"><use href="#i-history"/></svg>View Live Timeline</div></div>';}).join('');}
+function scheduleAction(id,action){const s=schedules.find(function(x){return x.id===id;});if(!s)return;if(action==='edit'){editSchedule(s);return;}if(!hasNativeBridge()){toast('Native controls unavailable');return;}if(action==='delete'&&!confirm('Delete this schedule?'))return;if(action==='callnow'&&!confirm('Place a real call to '+s.number+' right now?'))return;let r=null;if(action==='start')r=safeJson(NativeBridge.startTask(String(id)),null);if(action==='stop')r=safeJson(NativeBridge.stopTask(String(id)),null);if(action==='delete')r=safeJson(NativeBridge.deleteTask(String(id)),null);if(action==='message')r=safeJson(NativeBridge.openMessage(String(id)),null);if(action==='dialer')r=safeJson(NativeBridge.openDialer(String(id)),null);if(action==='callnow')r=safeJson(NativeBridge.callNow(String(id)),null);toast((r&&r.message)||'Done');syncFromNative();}
+function editSchedule(s){resetWizard();editingId=s.id;setCallMode(s.executionMode||'NORMAL_SIM');document.getElementById('w-phone').value=s.number;const when=Number(s.triggerAt||s.nextTrigger||0);const d=when?new Date(when):null;document.getElementById('w-date').value=s.dateIso||todayISO();const edHour24=d?d.getHours():9;const edHour12=(edHour24%12)||12;setTimePart('w-hour',edHour12);setTimePart('w-minute',d?d.getMinutes():15);wizSeg['w-second']=pad2(d?d.getSeconds():0);wizSeg['w-ampm']=edHour24<12?'AM':'PM';document.querySelectorAll('#w-am, #w-pm').forEach(function(b){b.classList.toggle('active',b.textContent.trim()===wizSeg['w-ampm']);});wizSeg['w-lang']=s.voiceLanguage||settings.voiceLanguage||'Hinglish';document.querySelectorAll('#w-voice-body .segmented-btn').forEach(function(b){b.classList.toggle('active',b.textContent.trim()===wizSeg['w-lang']);});const simToggle=document.getElementById('w-sim-enabled');if(simToggle)simToggle.checked=!!s.simSelectionEnabled;selectedSimHandle=s.phoneAccountComponent&&s.phoneAccountId?(s.phoneAccountComponent+'::'+s.phoneAccountId):'';renderSimSelector();document.getElementById('w-attempts').textContent=String(s.attemptsMax||1);const ri=Math.max(20,Number(s.retryIntervalSeconds||20));document.getElementById('w-retry-h').textContent=String(Math.floor(ri/3600));document.getElementById('w-retry-m').textContent=String(Math.floor((ri%3600)/60));document.getElementById('w-retry-s').textContent=String(ri%60);document.getElementById('w-call-enabled').checked=!!s.callEnabled;document.getElementById('w-voice-enabled').checked=!!s.voiceEnabled;document.getElementById('w-notif-enabled').checked=!!s.notificationEnabled;document.getElementById('w-notif-before').checked=!!s.notifyBefore;document.getElementById('w-notif-at').checked=!!s.notifyAt;document.getElementById('w-notif-after').checked=!!s.notifyAfter;document.getElementById('w-voice-msg').value=s.messageText||'';const ws=document.getElementById('w-speed');if(ws){ws.value=Number(s.voiceSpeed||settings.voiceSpeed||1);const wsv=document.getElementById('w-speed-val');if(wsv)wsv.textContent=Number(ws.value).toFixed(1)+'x';}const wvs=document.getElementById('w-voice-select');if(wvs)wvs.selectedIndex=0;document.getElementById('w-recurrence').value=s.recurrence||'ONCE';document.querySelectorAll('#w-repeat-days .chip').forEach(function(x){x.classList.toggle('active',(s.repeatDays||[]).indexOf(Number(x.dataset.day))>=0);});toggleRepeatDays();['call','voice','notif'].forEach(toggleModule);nav('screen-add');toast('Editing '+s.name);}
+
+function setHistoryFilter(el,type){historyFilter=type;document.querySelectorAll('#history-filters .chip').forEach(function(c){c.classList.remove('active');});el.classList.add('active');renderHistory();}
+function renderHistory(){const q=(document.getElementById('history-search').value||'').toLowerCase();let list=history.filter(function(h){const all=(h.name+' '+h.call+' '+h.voice+' '+h.ai+' '+h.rawType+' '+h.rawResult).toLowerCase();return all.indexOf(q)>-1;});if(historyFilter!=='all'&&historyFilter!=='date')list=list.filter(function(h){return h.type.indexOf(historyFilter)>-1;});const wrap=document.getElementById('history-list');if(!list.length){wrap.innerHTML=emptyState('history','No matching history','Try a different search or filter.');return;}wrap.innerHTML=list.slice().reverse().map(function(h){const callResult=String(h.call);const callKind=(callResult==='CALL_CONNECTED_ENDED'||callResult==='CALL_OFFHOOK_ENDED'||callResult.indexOf('COMPLETED')>=0)?'completed':((callResult.indexOf('FAILED')>=0||callResult.indexOf('NO_ANSWER')>=0||callResult.indexOf('WITHOUT_CONNECT')>=0||callResult.indexOf('TIMEOUT')>=0)?'failed':'scheduled');const voiceKind=String(h.voice).indexOf('VOICE_')===0?'delivered':'off';const aiKind=String(h.ai).indexOf('MESSAGE_')===0?'ready':'off';return '<div class="history-row"><div class="hr-top"><span class="hr-name">'+esc(h.name)+'</span><span class="hr-time mono">'+esc(h.time)+'</span></div><div class="hr-badges"><span class="badge badge-slate">Attempt '+esc(h.attempt)+'</span>'+statusBadge(callKind,'Call: '+esc(h.call))+statusBadge(voiceKind,'Voice: '+esc(h.voice))+statusBadge(aiKind,'AI: '+esc(h.ai))+'<span class="badge badge-slate">Local: '+esc(h.state)+'</span><span class="badge badge-slate">Source: '+esc(h.source)+'</span></div></div>';}).join('');}
+function renderContacts(){const q=(document.getElementById('contacts-search').value||'').toLowerCase();const wrap=document.getElementById('contacts-list');const filtered=contacts.filter(function(c){return (c.name||'').toLowerCase().indexOf(q)>-1||(c.number||'').indexOf(q)>-1;});if(!filtered.length){wrap.innerHTML=emptyState('users','No contacts found','Grant Contacts permission or change your search.');return;}wrap.innerHTML=filtered.map(function(c){return '<div class="contact-row"><div class="avatar">'+esc(c.initials||'?')+'</div><div class="contact-info"><div class="contact-name">'+esc(c.name)+'</div><div class="contact-num">'+esc(c.number)+'</div><span class="contact-group">'+esc(c.group||'Phone')+'</span></div><button class="icon-btn" onclick="quickSchedule('+Number(c.id)+')" aria-label="Schedule"><svg class="icon-sm"><use href="#i-plus"/></svg></button></div>';}).join('');}
+function quickSchedule(id){const c=contacts.find(function(x){return Number(x.id)===Number(id);});resetWizard();if(c){document.getElementById('w-phone').value=c.number;}closeModal('modal-pick-contact');nav('screen-add');toast('Starting a new schedule for '+(c?c.name:'contact'));}
+function choosePickedContact(id){quickSchedule(id);}
+function toggleSimSelection(){const on=!!document.getElementById('w-sim-enabled')?.checked;const body=document.getElementById('w-sim-body');if(body)body.style.display=on?'':'none';if(on&&!selectedSimHandle&&simAccounts.length){selectedSimHandle=simAccounts[0].handleKey||simAccounts[0].handleId;}renderSimSelector();}
+function renderSimSelector(){const section=document.getElementById('w-sim-section');const select=document.getElementById('w-sim-select');const body=document.getElementById('w-sim-body');const toggle=document.getElementById('w-sim-enabled');if(!section||!select)return;const dual=simAccounts.length>=2;section.style.display=dual?'':'none';if(!dual){if(toggle)toggle.checked=false;selectedSimHandle='';if(body)body.style.display='none';select.innerHTML='';return;}select.innerHTML=simAccounts.map(function(x){const key=x.handleKey||x.handleId;return '<option value=\"'+esc(key)+'\">'+esc(x.label||'SIM')+'</option>';}).join('');if(selectedSimHandle&&simAccounts.some(function(x){return (x.handleKey||x.handleId)===selectedSimHandle;})){select.value=selectedSimHandle;}else{select.value=simAccounts[0].handleKey||simAccounts[0].handleId;selectedSimHandle=select.value;}if(body)body.style.display=toggle&&toggle.checked?'':'';}
+function renderPickerContacts(){const q=String((document.getElementById('pick-contact-search')||{}).value||'').trim().toLowerCase();const list=document.getElementById('pick-contact-list');const filtered=contacts.filter(function(c){return String(c.name||'').toLowerCase().indexOf(q)>-1||String(c.number||'').toLowerCase().indexOf(q)>-1;});if(!filtered.length){list.innerHTML=emptyState('users','No contacts found','Try a different name or number.');return;}list.innerHTML=filtered.map(function(c){return '<div class="contact-row" style="cursor:pointer" onclick="choosePickedContact('+Number(c.id)+')"><div class="avatar">'+esc(c.initials||'?')+'</div><div class="contact-info"><div class="contact-name">'+esc(c.name)+'</div><div class="contact-num">'+esc(c.number)+'</div><span class="contact-group">'+esc(c.group||'Phone')+'</span></div></div>';}).join('');}
+function openContactPicker(){if(hasNativeBridge())syncFromNative();const search=document.getElementById('pick-contact-search');if(search)search.value='';renderPickerContacts();openModal('modal-pick-contact');}
+
+function openTimeline(id){const s=schedules.find(function(x){return x.id===id;});if(!s)return;if(!hasNativeBridge()){return;}const events=safeJson(NativeBridge.getTaskHistoryJson(String(id)),[]);document.getElementById('tl-modal-name').textContent=s.name;document.getElementById('tl-modal-sub').textContent=s.date+' · '+s.time;const wrap=document.getElementById('tl-modal-body');if(!events.length){wrap.innerHTML='<div class="empty-state">No execution events yet.</div>';openModal('modal-timeline');return;}wrap.innerHTML=events.slice().reverse().map(function(e){const res=String(e.result||'');const live=String(e.liveStatus||'');const isAiVoiceFailure=live.indexOf('AI_VOICE_')===0&&live!=='AI_VOICE_REQUESTED';const state=(res.indexOf('FAILED')>=0||isAiVoiceFailure)?'failed':(res.indexOf('COMPLETED')>=0||res.indexOf('REQUESTED')>=0?'done':'active');return '<div class="timeline-item '+state+'"><div class="timeline-label">'+esc(e.eventType||'EVENT')+'</div><div class="timeline-sub">'+esc(res)+' · '+esc(e.liveStatus||'')+' · '+esc(e.source||'SCHEDULED')+'</div><div class="timeline-time mono">'+esc(uiTimeFromMillis(Number(e.time||0)))+'</div></div>';}).join('');openModal('modal-timeline');}
+function openDiagnostics(recheck){
+  if(!hasNativeBridge()){toast('Diagnostics unavailable in preview');return;}
+  const raw=safeJson(NativeBridge.getDiagnosticsJson(),null);
+  if(!raw){toast('Diagnostics check failed');return;}
+  const items=[
+    ['Screen',raw.screen==='ON'],['Lock',raw.lock!=='LOCKED'],['Network',raw.network==='CONNECTED'],
+    ['Scheduler',raw.scheduler==='READY'],['Exact Alarm',!!raw.exactAlarm],['Call Permission',!!raw.callPermission],
+    ['Phone State',!!raw.phoneStatePermission],['Notifications',!!raw.notificationsPermission],
+    ['Battery',!!raw.batteryUnrestricted],['Background',!raw.backgroundRestricted],
+    ['Phone Account',!!raw.callAccountReady],['SIM / Account Count',Number(raw.simCount||0)>0],
+    ['TTS',!!raw.ttsReady],['AI',String(raw.aiStatus||'DISABLED')],
+    ['AI Voice Backend',String(raw.aiVoiceBackendStatus||'NOT_CONFIGURED')],
+  ];
+  const html=items.map(function(item){
+    const ok=typeof item[1]==='boolean'?item[1]:!['ERROR','NOT_CONFIGURED','DISABLED','OFFLINE','AUTH_ERROR','SERVER_ERROR','RATE_LIMITED','AUTH_FAILED','INVALID_URL','REJECTED','CONFIG_MISSING'].includes(String(item[1]).toUpperCase());
+    const value=typeof item[1]==='boolean'?(ok?'PASS':'CHECK'):String(item[1]);
+    return '<div class="settings-row"><div class="settings-row-label"><div class="settings-row-title">'+esc(item[0])+'</div></div><span class="badge '+(ok?'badge-green':'badge-red')+'">'+esc(value)+'</span></div>';
+  }).join('');
+  const footer='<div class="field-hint" style="margin-top:12px">Screen: '+esc(raw.screen)+' · Lock: '+esc(raw.lock)+' · Network: '+esc(raw.network)+' · Call: '+esc(raw.callState)+'</div>';
+  document.getElementById('diagnostics-content').innerHTML=html+footer;
+  const anyBad=items.some(function(item){return typeof item[1]==='boolean'&&!item[1];});
+  const badge=document.getElementById('status-diagnostics');
+  if(badge){badge.className='badge '+(anyBad?'badge-red':'badge-green');badge.textContent=anyBad?'CHECK':'READY';}
+
+  const oemBlock=document.getElementById('oem-advisory-block');
+  if(oemBlock){
+    if(raw.oemLikelyExtraRestrictions){
+      oemBlock.style.display='block';
+      oemBlock.innerHTML='<div class="card" style="border-color:rgba(217,165,92,.4);padding:12px">'
+        +'<div class="settings-row-title" style="margin-bottom:4px">'+esc(raw.oemFamily||'This device')+' background restrictions</div>'
+        +'<div class="field-hint" style="margin:0 0 10px">'+esc(raw.oemAdvisory||'')+'</div>'
+        +'<button class="btn btn-outline btn-block" onclick="openOemBackgroundSettingsUI()">OPEN BACKGROUND SETTINGS</button>'
+        +'</div>';
+    } else {
+      oemBlock.style.display='none';
+      oemBlock.innerHTML='';
+    }
+  }
+  renderExecutionTrace(window.__diagTraceTaskId||'');
+  openModal('modal-diagnostics');
+}
+
+/** Renders the REAL recorded pipeline stages (ExecutionTraceStore), not a simulation. taskId blank = most recent execution. */
+function renderExecutionTrace(taskId){
+  const el=document.getElementById('trace-content');
+  if(!el)return;
+  if(!hasNativeBridge()){el.innerHTML='<div class="empty-state" style="padding:12px 0">Trace unavailable in preview</div>';return;}
+  const events=safeJson(NativeBridge.getExecutionTraceJson(String(taskId||'')),[]);
+  if(!events||!events.length){
+    el.innerHTML='<div class="empty-state" style="padding:12px 0">No execution trace recorded yet. Trace is written the next time a real schedule fires, or run the background test below.</div>';
+    return;
+  }
+  el.innerHTML=events.map(function(e){
+    const cls=e.result==='PASS'?'badge-green':(e.result==='FAIL'?'badge-red':'badge-slate');
+    let ctx='screen='+e.screen+' · lock='+e.lock+' · battery='+e.battery+' · exactAlarm='+e.exactAlarm+' · source='+(e.callSource||'SCHEDULED')+' · attempt='+e.attempt;
+    if(e.phoneAccount)ctx+=' · acct='+e.phoneAccount;
+    return '<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)">'
+      +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+      +'<span class="mono" style="opacity:.8;font-size:11px">'+esc(e.time)+'</span>'
+      +'<b style="font-size:12px">'+esc(e.stage)+'</b>'
+      +'<span class="badge '+cls+'" style="font-size:9px;padding:1px 6px">'+esc(e.result)+'</span>'
+      +'</div>'
+      +'<div class="field-hint" style="margin:2px 0 0;font-size:10px">'+esc(ctx)+(e.detail?' · '+esc(e.detail):'')+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function runBackgroundTestFlow(){
+  if(!hasNativeBridge()){toast('Diagnostics unavailable in preview');return;}
+  const numEl=document.getElementById('diag-test-number');
+  const num=(numEl&&numEl.value||'').trim();
+  const statusEl=document.getElementById('diag-test-status');
+  if(!num){toast('Enter a number to call for this test');return;}
+  if(!confirm('This will place a REAL phone call to '+num+' in 60 seconds, even if you lock the screen now. Continue?'))return;
+  const r=safeJson(NativeBridge.runBackgroundTest(num),null);
+  if(!r||!r.ok){toast((r&&r.message)||'Could not start the test');if(statusEl)statusEl.textContent='';return;}
+  window.__diagTraceTaskId=String(r.taskId||'');
+  toast(r.message||'Test scheduled');
+  if(statusEl)statusEl.textContent='Scheduled — lock the screen now. This card will keep the trace once you reopen the app.';
+  setTimeout(function(){
+    if(statusEl)statusEl.textContent='Test window elapsed — tap REFRESH TRACE above (or reopen Diagnostics) to see the result.';
+  },65000);
+}
+
+function exportDiagnosticLog(){
+  if(!hasNativeBridge()){toast('Export unavailable in preview');return;}
+  const r=safeJson(NativeBridge.exportDiagnosticLog(),null);
+  toast((r&&r.message)||'Export failed');
+}
+
+function openOemBackgroundSettingsUI(){
+  if(!hasNativeBridge())return;
+  const r=safeJson(NativeBridge.openOemBackgroundSettings(),null);
+  toast((r&&r.message)||'Could not open settings');
+}
+
+function emergencyStop(){if(!confirm('Stop every active and scheduled call?'))return;if(hasNativeBridge()){const r=safeJson(NativeBridge.stopAll(),null);toast((r&&r.message)||'All schedules stopped');syncFromNative();}else toast('Native controls unavailable');}
+function pauseAll(){if(hasNativeBridge()){const r=safeJson(NativeBridge.pauseAll(),null);toast((r&&r.message)||'All schedules paused');syncFromNative();}}
+function resumeAll(){if(hasNativeBridge()){const r=safeJson(NativeBridge.resumeAll(),null);toast((r&&r.message)||'Schedules resumed');syncFromNative();}}
+
+function NativeSet(k,v,refresh){if(hasNativeBridge()){const r=safeJson(NativeBridge.setSetting(k,String(v)),null);if(r&&!r.ok)toast(r.message||'Setting update failed');else if(refresh!==false)syncFromNative();}}
+function editSetting(key,title,kind){const current=key==='defaultAttempts'?(settings.defaultAttempts||5):(settings.defaultRetrySeconds||300);const unit=key==='defaultRetrySeconds'?((current%3600===0)?(current/3600)+'h':(current/60)+' min'):current;const value=prompt(title+' ('+(key==='defaultRetrySeconds'?'minutes':kind)+')',String(unit).replace(' min',''));if(value===null)return;if(key==='defaultRetrySeconds'){const n=parseInt(value,10);if(!Number.isFinite(n)||n<1){toast('Enter a valid retry time');return;}NativeSet(key,String(n*60));}else NativeSet(key,value);}
+function setVoiceLanguage(el,value){document.querySelectorAll('[data-setting-lang]').forEach(function(x){x.classList.remove('active');});el.classList.add('active');NativeSet('voiceLanguage',value);}
+function setVoiceSpeed(v){document.getElementById('set-voice-speed').textContent=Number(v).toFixed(1)+'x';NativeSet('voiceSpeed',Number(v).toFixed(1),false);settings.voiceSpeed=Number(v);}
+function setVoicePitch(v){document.getElementById('set-voice-pitch').textContent=Number(v).toFixed(1);NativeSet('voicePitch',Number(v).toFixed(1),false);settings.voicePitch=Number(v);}
+function setAIEnabled(v){const r=hasNativeBridge()?safeJson(NativeBridge.setSetting('aiEnabled',String(v)),null):null;if(r&&!r.ok){document.getElementById('set-ai-enabled').checked=!v;toast(r.message||'AI setting update failed');return;}toast((r&&r.message)||'AI setting updated');syncFromNative();}
+function configureAI(){if(hasNativeBridge()){NativeBridge.configureAi();}else toast('AI settings unavailable in preview');}
+function testAIConnection(){if(!hasNativeBridge())return;const r=safeJson(NativeBridge.testAiConnection(),null);toast((r&&r.message)||'AI test finished');syncFromNative();}
+function openAdminPanel(){
+  if(!hasNativeBridge()){toast('Admin Panel unavailable in preview');return;}
+  const r=safeJson(NativeBridge.openAdminPanel(),null);
+  if(r&&!r.ok){
+    toast(r.message||'Could not open Admin Panel');
+    if(r.message&&r.message.toLowerCase().includes('url')) configurePromptSync();
+  } else {
+    toast((r&&r.message)||'Opening Admin Panel');
+  }
+}
+function configurePromptSync(){
+  if(hasNativeBridge()){NativeBridge.configurePromptSync();}
+  else toast('Prompt catalog settings unavailable in preview');
+}
+function syncPromptCatalog(){
+  if(!hasNativeBridge())return;
+  if(!settings||!settings.adminCatalogUrl){
+    toast('Set an Admin Catalog URL first');
+    return;
+  }
+  const r=safeJson(NativeBridge.refreshPromptCatalog(),null);
+  if(!r||!r.ok){
+    toast((r&&r.message)||'Could not start sync');
+    return;
+  }
+  toast('Syncing prompt catalog…');
+}
+function onPromptCatalogSynced(raw){
+  const r=safeJson(raw,null);
+  if(!r)return;
+  if(r.ok){
+    toast('Prompt catalog synced'+(r.count?(' · '+r.count+' prompts'):''));
+  }else{
+    toast('Sync failed: '+(r.error||'unknown error'));
+  }
+  syncAiPrompts();
+  syncFromNative();
+}
+function testAiVoiceBackend(){
+  if(!hasNativeBridge())return;
+  if(!settings||!settings.aiVoiceBackendConfigured){
+    toast('Set an Admin/Backend URL first');
+    return;
+  }
+  const r=safeJson(NativeBridge.testAiVoiceBackend(),null);
+  if(!r||!r.ok){
+    toast((r&&r.message)||'Could not start check');
+    return;
+  }
+  toast('Checking AI Voice backend…');
+}
+function onAiVoiceBackendTested(raw){
+  const r=safeJson(raw,null);
+  if(!r)return;
+  toast(r.ok?'AI Voice backend is reachable':('AI Voice backend check: '+(r.message||r.status||'failed')));
+  syncFromNative();
+}
+function setNotificationSetting(k,v){NativeSet(k,v);}
+function setTheme(v){NativeSet('theme',v);}
+function setAccent(v){NativeSet('accent',v);}
+function setFontSize(v){NativeSet('fontSize',v);}
+function setAppLock(v){if(!hasNativeBridge())return;const r=safeJson(NativeBridge.toggleAppLock(String(v)),null);if(r&&!r.ok){document.getElementById('set-app-lock').checked=!v;}toast((r&&r.message)||'App lock updated');syncFromNative();}
+function setPin(){if(hasNativeBridge())NativeBridge.setPinDialog();}
+function backupData(){if(hasNativeBridge()){const r=safeJson(NativeBridge.backupData(),null);toast((r&&r.message)||'Backup started');}}
+function restoreData(){if(hasNativeBridge()){const r=safeJson(NativeBridge.restoreData(),null);toast((r&&r.message)||'Restore started');}}
+function clearHistory(){if(!confirm('Clear all history?'))return;if(hasNativeBridge()){const r=safeJson(NativeBridge.clearHistory(),null);toast((r&&r.message)||'History cleared');syncFromNative();}}
+function openExactAlarmSettings(){if(hasNativeBridge()){const r=safeJson(NativeBridge.openExactAlarmSettings(),null);if(r&&!r.ok)toast(r.message||'Unable to open settings');}else toast('System settings unavailable in preview');}
+function openPhoneModule(){if(hasNativeBridge()){NativeBridge.openPhoneModule();}else toast('Phone module requires the Android app');}
+function openBatterySettings(){if(hasNativeBridge())NativeBridge.openBatterySettings();}
+function openNotificationSettings(){if(hasNativeBridge())NativeBridge.openNotificationSettings();}
+function updateSettingsUI(){if(!settings)return;const byId=function(id){return document.getElementById(id);};if(byId('set-default-attempts'))byId('set-default-attempts').textContent=settings.defaultAttempts||5;let rs=Number(settings.defaultRetrySeconds||300);byId('set-default-retry').textContent=rs>=3600?(rs/3600).toFixed(1)+' h':Math.round(rs/60)+' min';byId('set-voice-speed').textContent=Number(settings.voiceSpeed||1).toFixed(1)+'x';byId('set-voice-pitch').textContent=Number(settings.voicePitch||1).toFixed(1);byId('set-voice-speed-range').value=settings.voiceSpeed||1;byId('set-voice-pitch-range').value=settings.voicePitch||1;byId('set-ai-enabled').checked=!!settings.aiEnabled;byId('set-ai-endpoint').textContent=settings.aiConfigured?'Gemini API configured':'Not configured';if(byId('set-ai-model'))byId('set-ai-model').textContent=settings.aiModel||'gemini-2.5-flash-lite';const lim=Number(settings.aiLocalDailyLimit||0),used=Number(settings.aiRequestsToday||0),remain=Number(settings.aiLocalRemaining||-1);if(byId('set-ai-guard'))byId('set-ai-guard').textContent=lim>0?(remain+' left'):'Off';if(byId('status-ai-usage'))byId('status-ai-usage').textContent=String(used);if(byId('set-ai-usage-sub'))byId('set-ai-usage-sub').textContent=lim>0?('Local guard '+lim+' · '+remain+' remaining'):'Requests started on this device';if(byId('ai-studio-usage'))byId('ai-studio-usage').textContent=String(used);if(byId('set-ai-test-sub'))byId('set-ai-test-sub').textContent=settings.aiLastError?String(settings.aiLastError).slice(0,90):'Checks Gemini access now';byId('set-notif-sound').checked=settings.notificationSound!==false;byId('set-notif-vibrate').checked=settings.notificationVibrate!==false;byId('set-app-lock').checked=!!settings.appLock;byId('set-lock-sub').textContent=settings.appLock?'Enabled':'Disabled';byId('set-pin-sub').textContent=settings.hasPin?'Set':'Not set';byId('set-last-backup').textContent=settings.lastBackup?'Last backup: '+uiDateFromMillis(Number(settings.lastBackup))+' '+uiTimeFromMillis(Number(settings.lastBackup)):'Never';document.querySelectorAll('[data-setting-lang]').forEach(function(x){x.classList.toggle('active',x.dataset.settingLang===settings.voiceLanguage);});byId('theme-dark').classList.toggle('active',settings.theme!=='light');byId('theme-light').classList.toggle('active',settings.theme==='light');['S','M','L'].forEach(function(v){byId('font-'+v).classList.toggle('active',settings.fontSize===v);});document.querySelectorAll('[data-accent]').forEach(function(x){x.classList.toggle('selected',x.dataset.accent===settings.accent);});const map={callPhone:'status-call',contacts:'status-contacts',notifications:'status-notifications',exactAlarm:'status-exact',tts:'status-tts',battery:'status-battery'};Object.keys(map).forEach(function(k){if(byId(map[k]))setStatusBadge(byId(map[k]),!!deviceStatus[k]);});if(byId('status-notifications-2'))setStatusBadge(byId('status-notifications-2'),!!deviceStatus.notifications);if(byId('status-exact-2'))setStatusBadge(byId('status-exact-2'),!!deviceStatus.exactAlarm);if(byId('status-tts-2'))setStatusBadge(byId('status-tts-2'),!!deviceStatus.tts);const aiText=deviceStatus.aiStatus||settings.aiStatus||'DISABLED';setStatusText('status-ai',aiText);setStatusText('status-ai-2',aiText);setStatusText('status-ai-config',settings.aiConfigured?'CONFIGURED':'NOT_CONFIGURED');updatePromptSyncUI();updateVoiceBackendUI();applyTheme();}
+function updatePromptSyncUI(){
+  if(!settings)return;
+  const byId=function(id){return document.getElementById(id);};
+  const url=String(settings.adminCatalogUrl||'').trim();
+  const st=String(settings.promptsSyncStatus||'LOCAL_ONLY').toUpperCase();
+
+  if(byId('set-prompt-sync-url')) {
+    byId('set-prompt-sync-url').textContent=url?url:'Using local catalog';
+  }
+
+  const badge=byId('status-prompt-sync');
+  if(badge){
+    badge.className='badge '+(st==='SYNCED'?'badge-green':(st==='ERROR'?'badge-red':'badge-slate'));
+    badge.textContent=st.replace(/_/g,' ');
+  }
+
+  const syncRow=byId('prompt-sync-now-row');
+  if(syncRow) syncRow.style.opacity=url?'1':'.65';
+
+  if(byId('set-prompt-sync-sub')){
+    byId('set-prompt-sync-sub').textContent =
+      st==='ERROR' && settings.promptsSyncError
+        ? String(settings.promptsSyncError).slice(0,90)
+        : (url?'Fetch enabled prompts from the admin server':'Set an admin catalog URL first');
+  }
+
+  const last=Number(settings.promptsLastSync||0);
+  if(byId('set-prompt-sync-last')){
+    byId('set-prompt-sync-last').textContent =
+      last ? uiDateFromMillis(last)+' '+uiTimeFromMillis(last) : 'Never';
+  }
+}
+function updateVoiceBackendUI(){
+  if(!settings)return;
+  const byId=function(id){return document.getElementById(id);};
+  const configured=!!settings.aiVoiceBackendConfigured;
+
+  if(byId('status-voice-backend-config')){
+    byId('status-voice-backend-config').className='badge '+(configured?'badge-green':'badge-slate');
+    byId('status-voice-backend-config').textContent=configured?'CONFIGURED':'NOT CONFIGURED';
+  }
+  if(byId('set-voice-backend-sub')){
+    byId('set-voice-backend-sub').textContent=configured?'Uses the Admin Catalog URL above':'Set the Admin Catalog URL above to enable AI Voice calls';
+  }
+
+  const testRow=byId('voice-backend-test-row');
+  if(testRow) testRow.style.opacity=configured?'1':'.65';
+
+  const status=String(settings.aiVoiceBackendStatus||'NOT_CONFIGURED');
+  setStatusText('status-voice-backend',status);
+
+  if(byId('set-voice-backend-test-sub')){
+    byId('set-voice-backend-test-sub').textContent =
+      (status!=='NOT_CONFIGURED' && status!=='NOT_TESTED' && settings.aiVoiceBackendLastError)
+        ? String(settings.aiVoiceBackendLastError).slice(0,90)
+        : (configured?'Checks backend connectivity now':'Set an admin/backend URL first');
+  }
+
+  const lastChecked=Number(settings.aiVoiceBackendLastTest||0);
+  if(byId('set-voice-backend-last')){
+    byId('set-voice-backend-last').textContent =
+      lastChecked ? uiDateFromMillis(lastChecked)+' '+uiTimeFromMillis(lastChecked) : 'Never';
+  }
+}
+function setStatusBadge(el,ok){el.className='badge '+(ok?'badge-green':'badge-red');el.textContent=ok?'Granted':'Not granted';}
+function setStatusText(id,text){const el=document.getElementById(id);if(!el)return;const t=String(text||'').toUpperCase();el.className='badge '+(t==='ONLINE'||t==='CONFIGURED'?'badge-green':(['ERROR','AUTH_ERROR','SERVER_ERROR','AUTH_FAILED','INVALID_URL','REJECTED','OFFLINE','CONFIG_MISSING'].indexOf(t)>=0?'badge-red':(t==='NOT_CONFIGURED'||t==='DISABLED'?'badge-slate':'badge-amber')));el.textContent=t.replace(/_/g,' ');}
+function applyTheme(){document.documentElement.dataset.theme=settings.theme||'dark';document.documentElement.dataset.accent=settings.accent||'cyan';document.documentElement.dataset.font=settings.fontSize||'M';}
+
+window.nativeCountdownTarget=0;
+document.addEventListener('DOMContentLoaded',function(){document.getElementById('w-date').value=todayISO();document.getElementById('w-date').addEventListener('change',updateSelectedTimeUI);const custom=localStorage.getItem('acm_custom_voice');if(custom&&document.getElementById('vs-msg'))document.getElementById('vs-msg').value=custom;renderWizardStep();if(hasNativeBridge()){syncFromNative();syncAiPrompts();}else{updateDashboard();renderSchedules();renderHistory();renderContacts();}updateDeviceClock();updateSelectedTimeUI();setInterval(tickCountdown,1000);setInterval(updateLiveState,1000);setInterval(updateDeviceClock,1000);setInterval(function(){updateSelectedTimeUI();if(document.visibilityState==='visible'&&hasNativeBridge())syncFromNative();},2000);window.addEventListener('focus',function(){if(hasNativeBridge())syncFromNative();});});
+</script>
+</body>
+</html>

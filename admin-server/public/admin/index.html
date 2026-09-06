@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AutoCallManager · Admin Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#07121F; --navy-2:#0E1E30; --navy-3:#142A40; --navy-4:#1A3349;
+    --ivory:#F7F3EA; --slate:#A8B7C7; --slate-dim:#63788C;
+    --cyan:#27A9E1; --cyan-dim:rgba(39,169,225,.14);
+    --green:#38B96B; --green-dim:rgba(56,185,107,.14);
+    --amber:#E3A83B; --amber-dim:rgba(227,168,59,.14);
+    --red:#D95C5C; --red-dim:rgba(217,92,92,.14);
+    --purple:#8B72D8;
+    --border:rgba(168,183,199,.16); --border-soft:rgba(168,183,199,.09);
+    --r-sm:8px; --r-md:12px; --r-lg:16px;
+    --shadow-card:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--navy); color:var(--ivory); font-family:'Manrope',-apple-system,BlinkMacSystemFont,sans-serif; -webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums;}
+  .serif{font-family:'Fraunces',serif;}
+  button{font-family:inherit; cursor:pointer;}
+  input,textarea,select{font-family:inherit; color:inherit; background:var(--navy-3); border:1px solid var(--border); border-radius:var(--r-sm); padding:9px 11px; outline:none;}
+  input:focus,textarea:focus,select:focus{border-color:var(--cyan);}
+  a{color:var(--cyan);}
+
+  /* ---------- Shell ---------- */
+  .shell{max-width:1180px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column;}
+  header{display:flex; align-items:center; gap:14px; padding:16px 22px; border-bottom:1px solid var(--border-soft); position:sticky; top:0; background:rgba(7,18,31,.92); backdrop-filter:blur(6px); z-index:10;}
+  .brand{display:flex; align-items:center; gap:10px; flex:1; min-width:0;}
+  .brand-mark{width:36px; height:36px; border-radius:10px; background:linear-gradient(160deg,var(--navy-3),var(--navy-2)); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--cyan); flex-shrink:0; font-weight:700;}
+  .brand-title{font-family:'Fraunces',serif; font-size:18px; font-weight:600;}
+  .brand-sub{font-size:12px; color:var(--slate-dim);}
+  .who{font-size:13px; color:var(--slate); display:flex; align-items:center; gap:10px;}
+  .btn{border:1px solid var(--border); background:var(--navy-3); color:var(--ivory); border-radius:var(--r-sm); padding:9px 14px; font-size:13.5px; font-weight:600; display:inline-flex; align-items:center; gap:6px;}
+  .btn:hover{background:var(--navy-4);}
+  .btn-primary{background:var(--cyan); border-color:var(--cyan); color:#04151F;}
+  .btn-primary:hover{filter:brightness(1.06);}
+  .btn-ghost{background:transparent;}
+  .btn-danger{background:transparent; border-color:var(--red); color:var(--red);}
+  .btn-danger:hover{background:var(--red-dim);}
+  .btn-sm{padding:6px 10px; font-size:12.5px;}
+  .icon-btn{width:34px;height:34px;border-radius:var(--r-sm);background:var(--navy-3);border:1px solid var(--border);color:var(--slate);display:flex;align-items:center;justify-content:center;}
+
+  main{flex:1; padding:22px;}
+  .hidden{display:none !important;}
+
+  /* ---------- Login ---------- */
+  .login-wrap{min-height:calc(100vh - 0px); display:flex; align-items:center; justify-content:center; padding:20px;}
+  .login-card{width:100%; max-width:380px; background:var(--navy-2); border:1px solid var(--border); border-radius:var(--r-lg); padding:30px 26px; box-shadow:var(--shadow-card);}
+  .login-card h1{font-family:'Fraunces',serif; font-size:22px; margin:14px 0 4px;}
+  .login-card p.sub{color:var(--slate); font-size:13px; margin:0 0 22px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12.5px; color:var(--slate); margin-bottom:6px; font-weight:600;}
+  .field input{width:100%;}
+  .error-banner{background:var(--red-dim); border:1px solid rgba(217,92,92,.35); color:#ffb3b3; border-radius:var(--r-sm); padding:10px 12px; font-size:13px; margin-bottom:14px;}
+  .hint-banner{background:var(--cyan-dim); border:1px solid rgba(39,169,225,.3); color:var(--cyan); border-radius:var(--r-sm); padding:10px 12px; font-size:12.5px; margin-top:16px; line-height:1.5;}
+
+  /* ---------- Layout: list + detail ---------- */
+  .layout{display:grid; grid-template-columns:300px 1fr; gap:18px; align-items:start;}
+  @media (max-width:860px){ .layout{grid-template-columns:1fr;} }
+
+  .panel{background:var(--navy-2); border:1px solid var(--border); border-radius:var(--r-lg); box-shadow:var(--shadow-card);}
+  .list-panel{padding:12px;}
+  .list-head{display:flex; align-items:center; justify-content:space-between; padding:8px 8px 12px;}
+  .list-head h2{font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-dim); font-weight:700; margin:0;}
+
+  .prompt-card{padding:12px; border-radius:var(--r-md); border:1px solid transparent; cursor:pointer; margin-bottom:6px;}
+  .prompt-card:hover{background:var(--navy-3);}
+  .prompt-card.active{background:var(--navy-3); border-color:var(--cyan);}
+  .prompt-card .pname{font-weight:700; font-size:14px; margin-bottom:3px;}
+  .prompt-card .pid{font-size:11.5px; color:var(--slate-dim);}
+  .prompt-card .prow{display:flex; align-items:center; justify-content:space-between; margin-top:8px;}
+
+  .badge{font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:20px; letter-spacing:.02em; display:inline-flex; align-items:center; gap:5px;}
+  .badge-on{background:var(--green-dim); color:var(--green);}
+  .badge-off{background:var(--border-soft); color:var(--slate-dim);}
+  .badge-v{background:var(--navy-4); color:var(--purple); font-family:'IBM Plex Mono',monospace;}
+
+  .detail{padding:22px;}
+  .detail-head{display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:18px; flex-wrap:wrap;}
+  .detail-head h2{font-family:'Fraunces',serif; font-size:22px; margin:0 0 4px;}
+  .detail-head .pid{color:var(--slate-dim); font-size:13px;}
+  .empty{padding:60px 20px; text-align:center; color:var(--slate-dim);}
+  .empty .serif{font-size:18px; color:var(--slate); display:block; margin-bottom:6px;}
+
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  @media (max-width:600px){ .grid-2{grid-template-columns:1fr;} }
+  .section-label{font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--slate-dim); font-weight:700; margin:22px 0 10px;}
+  .section-label:first-child{margin-top:0;}
+
+  textarea.template-editor{width:100%; min-height:150px; font-family:'IBM Plex Mono',monospace; font-size:13px; line-height:1.6; resize:vertical;}
+  .var-preview{margin-top:10px; padding:12px 14px; background:var(--navy); border:1px dashed var(--border); border-radius:var(--r-md); font-family:'IBM Plex Mono',monospace; font-size:12.5px; line-height:1.7; color:var(--slate); white-space:pre-wrap; word-break:break-word;}
+  .var-chip{background:var(--cyan-dim); color:var(--cyan); padding:1px 6px; border-radius:5px; font-weight:600;}
+
+  .actions-row{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
+
+  .history-row{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:var(--r-md); border:1px solid var(--border-soft); margin-bottom:8px;}
+  .history-row.current{border-color:var(--cyan); background:var(--cyan-dim);}
+  .history-meta{font-size:12px; color:var(--slate);}
+  .history-meta .v{color:var(--ivory); font-weight:700; font-family:'IBM Plex Mono',monospace;}
+
+  .test-output{margin-top:12px; padding:12px 14px; border-radius:var(--r-md); background:var(--navy); border:1px solid var(--border-soft); font-size:13.5px; line-height:1.6; white-space:pre-wrap;}
+  .test-output.live{border-color:rgba(56,185,107,.4);}
+  .test-output .tag{font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--slate-dim); display:block; margin-bottom:6px;}
+
+  .modal-backdrop{position:fixed; inset:0; background:rgba(4,10,17,.7); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px;}
+  .modal{background:var(--navy-2); border:1px solid var(--border); border-radius:var(--r-lg); padding:24px; width:100%; max-width:440px; box-shadow:var(--shadow-card);}
+  .modal h3{font-family:'Fraunces',serif; margin:0 0 14px; font-size:18px;}
+
+  .toast-stack{position:fixed; bottom:20px; right:20px; z-index:100; display:flex; flex-direction:column; gap:8px; max-width:320px;}
+  .toast{background:var(--navy-4); border:1px solid var(--border); border-radius:var(--r-md); padding:12px 14px; font-size:13px; box-shadow:var(--shadow-card); animation:slidein .18s ease-out;}
+  .toast.err{border-color:rgba(217,92,92,.5); background:var(--red-dim); color:#ffd6d6;}
+  .toast.ok{border-color:rgba(56,185,107,.4);}
+  @keyframes slidein{from{transform:translateY(8px);opacity:0;} to{transform:translateY(0);opacity:1;}}
+
+  .checkbox-row{display:flex; align-items:center; gap:8px; font-size:13.5px;}
+  .checkbox-row input{width:16px; height:16px; padding:0;}
+  textarea.small{min-height:60px;}
+  .muted{color:var(--slate-dim);}
+  .audit-row{padding:9px 0; border-bottom:1px solid var(--border-soft); font-size:12.5px;}
+  .audit-row .t{color:var(--slate-dim); font-family:'IBM Plex Mono',monospace; font-size:11px;}
+</style>
+</head>
+<body>
+
+<div id="toastStack" class="toast-stack"></div>
+
+<!-- ============== LOGIN ============== -->
+<div id="loginView" class="login-wrap">
+  <div class="login-card">
+    <div class="brand-mark serif" style="width:44px;height:44px;font-size:18px;">AC</div>
+    <h1>AutoCallManager Admin Control Center</h1>
+    <p class="sub">Sign in to manage AutoCallManager's AI reminder prompts.</p>
+    <div id="loginError" class="error-banner hidden"></div>
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginUser">Username</label>
+        <input id="loginUser" type="text" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label for="loginPass">Password</label>
+        <input id="loginPass" type="password" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;">Sign in</button>
+    </form>
+    <div class="hint-banner">First run? The server console printed a generated username and password when it booted. Check the terminal where you started <span class="mono">node src/server.js</span>.</div>
+  </div>
+</div>
+
+<!-- ============== APP ============== -->
+<div id="appView" class="shell hidden">
+  <header>
+    <div class="brand">
+      <div class="brand-mark serif">AC</div>
+      <div>
+        <div class="brand-title">Prompt Catalog</div>
+        <div class="brand-sub">AutoCallManager Admin · V1.0.9</div>
+      </div>
+    </div>
+    <div class="who">
+      <span id="whoUser"></span>
+      <span id="whoRole" class="badge badge-v"></span>
+      <button class="icon-btn" id="voiceSafetyBtn" title="AI Voice safety">☎</button>
+      <button class="icon-btn" id="auditBtn" title="Audit log">≣</button>
+      <button class="icon-btn" id="pwBtn" title="Change password">⚿</button>
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">Log out</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="layout">
+      <div class="panel list-panel">
+        <div class="list-head">
+          <h2>Prompts</h2>
+          <button class="btn btn-sm btn-primary" id="newPromptBtn">+ New</button>
+        </div>
+        <div id="promptList"></div>
+      </div>
+
+      <div class="panel detail" id="detailPanel">
+        <div class="empty">
+          <span class="serif">Select a prompt</span>
+          Choose a prompt on the left, or create a new one.
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ============== New Prompt Modal ============== -->
+<div id="newModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3>New prompt</h3>
+    <div class="field">
+      <label>ID (stable, never changes) — e.g. message.custom.v1</label>
+      <input id="npId" type="text" placeholder="message.custom.v1" />
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label>Type</label>
+        <input id="npType" type="text" placeholder="MESSAGE_GENERATE" />
+      </div>
+      <div class="field">
+        <label>Max words</label>
+        <input id="npMaxWords" type="number" value="60" min="10" max="300" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Display name</label>
+      <input id="npName" type="text" placeholder="Custom Reminder" />
+    </div>
+    <div class="field">
+      <label>Template — use {{instruction}} and {{maxWords}}</label>
+      <textarea id="npTemplate" class="template-editor small" placeholder="Write one short reminder from: {{instruction}}"></textarea>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" id="npCreateBtn">Create prompt</button>
+      <button class="btn btn-ghost" id="npCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== Change Password Modal ============== -->
+<div id="pwModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3>Change password</h3>
+    <div id="pwError" class="error-banner hidden"></div>
+    <div class="field">
+      <label>Current password</label>
+      <input id="pwCurrent" type="password" />
+    </div>
+    <div class="field">
+      <label>New password (min 10 characters)</label>
+      <input id="pwNew" type="password" />
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" id="pwSaveBtn">Save</button>
+      <button class="btn btn-ghost" id="pwCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== AI Voice Safety Modal ============== -->
+<div id="voiceSafetyModal" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:520px;">
+    <h3>AI Voice Safety</h3>
+    <p class="muted" style="font-size:12.5px;line-height:1.5;">Consent is required for AI Voice calls. A recipient can opt out at any time; the safety gate is enforced by the backend.</p>
+    <div class="field"><label>Recipient phone (international)</label><input id="vsPhone" type="text" placeholder="+91XXXXXXXXXX" /></div>
+    <div class="actions-row">
+      <button class="btn btn-sm" id="vsLookupBtn">Lookup</button>
+      <button class="btn btn-sm" id="vsOptOutBtn">Opt out</button>
+      <button class="btn btn-sm" id="vsRestoreBtn">Restore block</button>
+    </div>
+    <div id="vsStatus" class="test-output" style="min-height:72px;"><span class="tag">Status</span>Enter a phone number and choose Lookup.</div>
+    <div class="section-label">Record consent</div>
+    <div class="grid-2">
+      <div class="field"><label>Source</label><input id="vsSource" placeholder="signup_form" /></div>
+      <div class="field"><label>Purpose</label><input id="vsPurpose" placeholder="appointment_reminders" /></div>
+    </div>
+    <div class="field"><label>Evidence ID (optional)</label><input id="vsEvidence" placeholder="consent-123" /></div>
+    <div class="actions-row">
+      <button class="btn btn-primary btn-sm" id="vsConsentBtn">Mark consented</button>
+      <button class="btn btn-sm" id="vsRevokeBtn">Revoke consent</button>
+      <button class="btn btn-ghost btn-sm" id="vsCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============== Audit Modal ============== -->
+<div id="auditModal" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:520px; max-height:80vh; overflow:auto;">
+    <h3>Recent activity</h3>
+    <div id="auditList"></div>
+    <div class="actions-row"><button class="btn btn-ghost" id="auditCloseBtn">Close</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var TOKEN_KEY = 'acm_admin_token';
+  var USER_KEY = 'acm_admin_user';
+  var ROLE_KEY = 'acm_admin_role';
+  var state = { prompts: [], selectedId: null, versions: [] };
+
+  // ---------- helpers ----------
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function token(){ return sessionStorage.getItem(TOKEN_KEY) || ''; }
+
+  function toast(msg, kind){
+    var el = document.createElement('div');
+    el.className = 'toast' + (kind ? ' ' + kind : '');
+    el.textContent = msg;
+    $('toastStack').appendChild(el);
+    setTimeout(function(){ el.remove(); }, 4200);
+  }
+
+  function api(path, opts){
+    opts = opts || {};
+    var headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+    if (token()) headers['Authorization'] = 'Bearer ' + token();
+    return fetch(path, Object.assign({}, opts, { headers: headers }))
+      .then(function(res){
+        return res.json().catch(function(){ return {}; }).then(function(data){
+          if (res.status === 401 && path !== '/v1/admin/login') {
+            logout(true);
+          }
+          if (!res.ok && data.ok !== true) {
+            var err = new Error(data.error || ('HTTP ' + res.status));
+            err.status = res.status;
+            throw err;
+          }
+          return data;
+        });
+      });
+  }
+
+  // ---------- auth ----------
+  function showApp(){
+    $('loginView').classList.add('hidden');
+    $('appView').classList.remove('hidden');
+    $('whoUser').textContent = sessionStorage.getItem(USER_KEY) || '';
+    $('whoRole').textContent = sessionStorage.getItem(ROLE_KEY) || '';
+    loadPrompts();
+  }
+
+  function showLogin(){
+    $('appView').classList.add('hidden');
+    $('loginView').classList.remove('hidden');
+  }
+
+  function logout(silent){
+    if (token() && !silent) { api('/v1/admin/logout', { method: 'POST' }).catch(function(){}); }
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem(ROLE_KEY);
+    showLogin();
+    if (silent) toast('Session expired. Please log in again.', 'err');
+  }
+
+  $('loginForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    $('loginError').classList.add('hidden');
+    var username = $('loginUser').value.trim();
+    var password = $('loginPass').value;
+    fetch('/v1/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username, password: password })
+    }).then(function(res){ return res.json().then(function(d){ return { status: res.status, data: d }; }); })
+      .then(function(r){
+        if (!r.data.ok) {
+          $('loginError').textContent = r.data.error || 'Login failed.';
+          $('loginError').classList.remove('hidden');
+          return;
+        }
+        sessionStorage.setItem(TOKEN_KEY, r.data.token);
+        sessionStorage.setItem(USER_KEY, r.data.username);
+        sessionStorage.setItem(ROLE_KEY, r.data.role || '');
+        showApp();
+      })
+      .catch(function(){
+        $('loginError').textContent = 'Could not reach the server.';
+        $('loginError').classList.remove('hidden');
+      });
+  });
+
+  $('logoutBtn').addEventListener('click', function(){ logout(false); });
+
+  // ---------- prompt list ----------
+  function loadPrompts(){
+    api('/v1/admin/prompts').then(function(d){
+      state.prompts = d.prompts || [];
+      renderList();
+      if (state.selectedId) {
+        var still = state.prompts.some(function(p){ return p.id === state.selectedId; });
+        renderDetail(still ? state.selectedId : null);
+      }
+    }).catch(function(e){ toast(e.message, 'err'); });
+  }
+
+  function renderList(){
+    var el = $('promptList');
+    if (!state.prompts.length) {
+      el.innerHTML = '<div class="empty" style="padding:30px 10px;">No prompts yet.</div>';
+      return;
+    }
+    el.innerHTML = state.prompts.map(function(p){
+      var active = p.id === state.selectedId ? ' active' : '';
+      return '' +
+        '<div class="prompt-card' + active + '" data-id="' + esc(p.id) + '">' +
+          '<div class="pname">' + esc(p.name) + '</div>' +
+          '<div class="pid mono">' + esc(p.id) + '</div>' +
+          '<div class="prow">' +
+            '<span class="badge ' + (p.enabled ? 'badge-on' : 'badge-off') + '">' + (p.enabled ? 'Enabled' : 'Disabled') + '</span>' +
+            '<span class="badge badge-v">v' + p.version + '</span>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+    Array.prototype.forEach.call(el.querySelectorAll('.prompt-card'), function(card){
+      card.addEventListener('click', function(){ renderDetail(card.getAttribute('data-id')); });
+    });
+  }
+
+  // ---------- detail / editor ----------
+  function highlightTemplate(tpl){
+    return esc(tpl).replace(/\{\{(\w+)\}\}/g, '<span class="var-chip">{{$1}}</span>');
+  }
+
+  function renderDetail(id){
+    state.selectedId = id;
+    renderList();
+    var panel = $('detailPanel');
+    if (!id) {
+      panel.innerHTML = '<div class="empty"><span class="serif">Select a prompt</span>Choose a prompt on the left, or create a new one.</div>';
+      return;
+    }
+    var p = state.prompts.find(function(x){ return x.id === id; });
+    if (!p) return;
+
+    panel.innerHTML = '' +
+      '<div class="detail-head">' +
+        '<div><h2>' + esc(p.name) + '</h2><div class="pid mono">' + esc(p.id) + ' · ' + esc(p.type) + '</div></div>' +
+        '<span class="badge badge-v">current v' + p.version + '</span>' +
+      '</div>' +
+
+      '<div class="section-label">Metadata</div>' +
+      '<div class="grid-2">' +
+        '<div class="field"><label>Display name</label><input id="fName" value="' + esc(p.name) + '" /></div>' +
+        '<div class="field"><label>Max words</label><input id="fMaxWords" type="number" min="10" max="300" value="' + p.maxWords + '" /></div>' +
+      '</div>' +
+      '<div class="checkbox-row" style="margin:6px 0 4px;"><input id="fEnabled" type="checkbox" ' + (p.enabled ? 'checked' : '') + ' /><label for="fEnabled">Enabled (visible to the mobile app)</label></div>' +
+      '<div class="actions-row"><button class="btn btn-sm" id="saveMetaBtn">Save metadata</button></div>' +
+
+      '<div class="section-label">Template — v' + p.version + '</div>' +
+      '<textarea id="fTemplate" class="template-editor">' + esc(p.template) + '</textarea>' +
+      '<div class="var-preview" id="fPreview"></div>' +
+      '<div class="actions-row">' +
+        '<button class="btn btn-primary btn-sm" id="saveVersionBtn">Save as new version</button>' +
+        '<button class="btn btn-sm" id="testBtn">Test render</button>' +
+      '</div>' +
+      '<div id="testOutput"></div>' +
+
+      '<div class="section-label">Version history</div>' +
+      '<div id="historyList" class="muted">Loading…</div>';
+
+    $('fTemplate').addEventListener('input', updatePreview);
+    updatePreview();
+
+    $('saveMetaBtn').addEventListener('click', function(){
+      api('/v1/prompts/' + encodeURIComponent(p.id), {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: $('fName').value.trim(),
+          maxWords: Number($('fMaxWords').value),
+          enabled: $('fEnabled').checked
+        })
+      }).then(function(){ toast('Metadata saved', 'ok'); loadPrompts(); })
+        .catch(function(e){ toast(e.message, 'err'); });
+    });
+
+    $('saveVersionBtn').addEventListener('click', function(){
+      var tpl = $('fTemplate').value.trim();
+      if (!tpl) { toast('Template cannot be empty', 'err'); return; }
+      api('/v1/prompts/' + encodeURIComponent(p.id) + '/versions', {
+        method: 'POST',
+        body: JSON.stringify({ template: tpl })
+      }).then(function(r){
+        toast('Saved as version ' + r.prompt.version, 'ok');
+        loadPrompts();
+      }).catch(function(e){ toast(e.message, 'err'); });
+    });
+
+    $('testBtn').addEventListener('click', function(){
+      var instruction = window.prompt('Sample instruction to render with:', 'Call papa and remind him about the 6pm appointment');
+      if (instruction == null) return;
+      api('/v1/prompts/' + encodeURIComponent(p.id) + '/test', {
+        method: 'POST',
+        body: JSON.stringify({ variables: { instruction: instruction } })
+      }).then(function(r){
+        var live = r.mode === 'live';
+        var label = r.mode === 'live' ? 'Live Gemini output' : r.mode === 'live_failed' ? 'Live call failed — showing rendered template' : 'Rendered template (set GEMINI_API_KEY on the server for live output)';
+        var body = r.mode === 'live' ? r.output : r.rendered;
+        $('testOutput').innerHTML = '<div class="test-output' + (live?' live':'') + '"><span class="tag">' + esc(label) + '</span>' + esc(body) + (r.error ? '\n\n⚠ ' + esc(r.error) : '') + '</div>';
+      }).catch(function(e){ toast(e.message, 'err'); });
+    });
+
+    loadHistory(p.id);
+  }
+
+  function updatePreview(){
+    var raw = $('fTemplate').value;
+    $('fPreview').innerHTML = highlightTemplate(raw) || '<span class="muted">Nothing to preview yet.</span>';
+  }
+
+  function loadHistory(id){
+    api('/v1/admin/prompts/' + encodeURIComponent(id) + '/versions').then(function(d){
+      var current = state.prompts.find(function(x){ return x.id === id; }).version;
+      $('historyList').innerHTML = d.versions.map(function(v){
+        var isCurrent = v.version === current;
+        return '' +
+          '<div class="history-row' + (isCurrent ? ' current' : '') + '">' +
+            '<div class="history-meta"><span class="v">v' + v.version + '</span> · ' + new Date(v.createdAt).toLocaleString() + (v.createdBy ? ' · ' + esc(v.createdBy) : '') + '</div>' +
+            (isCurrent ? '<span class="badge badge-on">Current</span>' : '<button class="btn btn-sm" data-rollback="' + v.version + '">Roll back</button>') +
+          '</div>';
+      }).join('') || '<div class="muted">No history yet.</div>';
+
+      Array.prototype.forEach.call($('historyList').querySelectorAll('[data-rollback]'), function(btn){
+        btn.addEventListener('click', function(){
+          var v = btn.getAttribute('data-rollback');
+          if (!confirm('Roll back to version ' + v + '? This becomes the live template immediately.')) return;
+          api('/v1/prompts/' + encodeURIComponent(id) + '/rollback', {
+            method: 'POST',
+            body: JSON.stringify({ version: Number(v) })
+          }).then(function(){ toast('Rolled back to v' + v, 'ok'); loadPrompts(); })
+            .catch(function(e){ toast(e.message, 'err'); });
+        });
+      });
+    }).catch(function(e){ toast(e.message, 'err'); });
+  }
+
+  // ---------- new prompt modal ----------
+  $('newPromptBtn').addEventListener('click', function(){ $('newModal').classList.remove('hidden'); });
+  $('npCancelBtn').addEventListener('click', function(){ $('newModal').classList.add('hidden'); });
+  $('npCreateBtn').addEventListener('click', function(){
+    var body = {
+      id: $('npId').value.trim(),
+      type: $('npType').value.trim() || 'MESSAGE_GENERATE',
+      name: $('npName').value.trim(),
+      maxWords: Number($('npMaxWords').value) || 60,
+      variables: ['instruction'],
+      template: $('npTemplate').value.trim()
+    };
+    if (!body.id || !body.name || !body.template) { toast('ID, name, and template are required', 'err'); return; }
+    api('/v1/prompts', { method: 'POST', body: JSON.stringify(body) }).then(function(r){
+      toast('Prompt created', 'ok');
+      $('newModal').classList.add('hidden');
+      ['npId','npType','npName','npTemplate'].forEach(function(id){ $(id).value = ''; });
+      $('npMaxWords').value = 60;
+      loadPrompts();
+      renderDetail(r.prompt.id);
+    }).catch(function(e){ toast(e.message, 'err'); });
+  });
+
+  // ---------- change password modal ----------
+  $('pwBtn').addEventListener('click', function(){ $('pwError').classList.add('hidden'); $('pwCurrent').value=''; $('pwNew').value=''; $('pwModal').classList.remove('hidden'); });
+  $('pwCancelBtn').addEventListener('click', function(){ $('pwModal').classList.add('hidden'); });
+  $('pwSaveBtn').addEventListener('click', function(){
+    api('/v1/admin/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword: $('pwCurrent').value, newPassword: $('pwNew').value })
+    }).then(function(){
+      $('pwModal').classList.add('hidden');
+      toast('Password changed. Please log in again.', 'ok');
+      logout(true);
+    }).catch(function(e){
+      $('pwError').textContent = e.message;
+      $('pwError').classList.remove('hidden');
+    });
+  });
+
+  // ---------- AI voice safety ----------
+  function showVoiceStatus(text, ok){
+    var el = $('vsStatus');
+    el.className = 'test-output' + (ok ? ' live' : '');
+    el.innerHTML = '<span class="tag">Status</span>' + esc(text);
+  }
+
+  $('voiceSafetyBtn').addEventListener('click', function(){
+    $('voiceSafetyModal').classList.remove('hidden');
+  });
+  $('vsCloseBtn').addEventListener('click', function(){
+    $('voiceSafetyModal').classList.add('hidden');
+  });
+  $('vsLookupBtn').addEventListener('click', function(){
+    var phone = $('vsPhone').value.trim();
+    if (!phone) return showVoiceStatus('Enter an international phone number.', false);
+    api('/v1/admin/voice/recipients/' + encodeURIComponent(phone)).then(function(r){
+      var x = r.recipient;
+      showVoiceStatus(
+        'Consent: ' + x.consentStatus + '\n' +
+        'Do not call: ' + (x.doNotCall ? 'YES' : 'NO') + '\n' +
+        'Source: ' + (x.consentSource || '—') + '\n' +
+        'Timestamp: ' + (x.consentTimestamp ? new Date(x.consentTimestamp).toLocaleString() : '—'),
+        x.consentStatus === 'CONSENTED' && !x.doNotCall
+      );
+    }).catch(function(e){ showVoiceStatus(e.message, false); });
+  });
+  $('vsConsentBtn').addEventListener('click', function(){
+    var phone = $('vsPhone').value.trim();
+    api('/v1/admin/voice/consent', {
+      method:'POST',
+      body:JSON.stringify({phoneNumber:phone,status:'CONSENTED',source:$('vsSource').value.trim(),purpose:$('vsPurpose').value.trim(),evidenceId:$('vsEvidence').value.trim()})
+    }).then(function(r){ toast('Consent recorded','ok'); showVoiceStatus('CONSENTED\nDo not call: ' + (r.recipient.doNotCall ? 'YES' : 'NO'), true); })
+      .catch(function(e){ showVoiceStatus(e.message, false); });
+  });
+  $('vsRevokeBtn').addEventListener('click', function(){
+    var phone = $('vsPhone').value.trim();
+    api('/v1/admin/voice/consent', {
+      method:'POST', body:JSON.stringify({phoneNumber:phone,status:'REVOKED',source:'admin_revocation'})
+    }).then(function(r){ toast('Consent revoked','ok'); showVoiceStatus('REVOKED', false); })
+      .catch(function(e){ showVoiceStatus(e.message, false); });
+  });
+  $('vsOptOutBtn').addEventListener('click', function(){
+    var phone = $('vsPhone').value.trim();
+    api('/v1/admin/voice/opt-out', {
+      method:'POST', body:JSON.stringify({phoneNumber:phone,source:'admin_opt_out'})
+    }).then(function(r){ toast('Recipient opted out','ok'); showVoiceStatus('DO_NOT_CALL = YES', false); })
+      .catch(function(e){ showVoiceStatus(e.message, false); });
+  });
+  $('vsRestoreBtn').addEventListener('click', function(){
+    var phone = $('vsPhone').value.trim();
+    api('/v1/admin/voice/restore', {
+      method:'POST', body:JSON.stringify({phoneNumber:phone})
+    }).then(function(r){ toast('Block restored','ok'); showVoiceStatus('Block cleared. Consent status remains ' + r.recipient.consentStatus + '.', r.recipient.consentStatus === 'CONSENTED'); })
+      .catch(function(e){ showVoiceStatus(e.message, false); });
+  });
+
+  // ---------- audit modal ----------
+  $('auditBtn').addEventListener('click', function(){
+    api('/v1/admin/audit').then(function(d){
+      $('auditList').innerHTML = d.entries.map(function(e){
+        return '<div class="audit-row"><div class="t">' + new Date(e.ts).toLocaleString() + '</div>' +
+          '<b>' + esc(e.admin_username) + '</b> — ' + esc(e.action) + (e.prompt_id ? ' · ' + esc(e.prompt_id) : '') +
+          (e.detail ? '<div class="muted">' + esc(e.detail) + '</div>' : '') + '</div>';
+      }).join('') || '<div class="muted">No activity yet.</div>';
+      $('auditModal').classList.remove('hidden');
+    }).catch(function(e){ toast(e.message, 'err'); });
+  });
+  $('auditCloseBtn').addEventListener('click', function(){ $('auditModal').classList.add('hidden'); });
+
+  // ---------- boot ----------
+  if (token()) { showApp(); } else { showLogin(); }
+})();
+</script>
+</body>
+</html>

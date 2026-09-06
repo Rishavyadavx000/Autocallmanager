@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="v6_background">#07121F</color>
+    <color name="v6_surface">#0D1B2A</color>
+    <color name="v6_card">#12263A</color>
+    <color name="v6_cyan">#27A9E1</color>
+    <color name="v6_green">#38B96B</color>
+    <color name="v6_orange">#E3A83B</color>
+    <color name="v6_red">#D95C5C</color>
+    <color name="v6_purple">#8B72D8</color>
+    <color name="v6_text">#F7F3EA</color>
+    <color name="v6_muted">#A8B7C7</color>
+</resources>

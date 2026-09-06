@@ -1,0 +1,15 @@
+{
+  "name": "autocallmanager-admin-server",
+  "version": "1.0.9",
+  "description": "Authenticated backend prompt manager for AutoCallManager (V1.0.9 Admin Panel). Zero runtime dependencies.",
+  "private": true,
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {}
+}

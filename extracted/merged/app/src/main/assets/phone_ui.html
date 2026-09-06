@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+<title>Calls</title>
+<style>
+/* ============ DESIGN TOKENS (matches auto_call_ui.html) ============ */
+:root{
+  --navy:#07121F; --navy-2:#0E1E30; --navy-3:#142A40; --navy-4:#1A3349;
+  --border:#1E3247; --border-soft:#16283B;
+  --ivory:#F7F3EA; --slate:#A8B7C7; --slate-dim:#63788C;
+  --cyan:#27A9E1; --cyan-dim:rgba(39,169,225,.14);
+  --purple:#8B72D8; --purple-dim:rgba(139,114,216,.14);
+  --amber:#E3A83B; --amber-dim:rgba(227,168,59,.14);
+  --green:#38B96B; --green-dim:rgba(56,185,107,.14);
+  --red:#D95C5C; --red-dim:rgba(217,92,92,.14);
+  --r-lg:16px; --r-md:14px; --r-sm:10px; --r-xs:8px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px;
+  --shadow-card:0 8px 24px rgba(2,7,14,.35);
+  --shadow-lg:0 16px 40px rgba(2,7,14,.45);
+}
+:root[data-theme="light"]{
+  --navy:#F5F8FB; --navy-2:#FFFFFF; --navy-3:#EEF3F7; --navy-4:#E4EBF2;
+  --border:#D7E0E8; --border-soft:#E3E9EF;
+  --ivory:#172333; --slate:#53667A; --slate-dim:#74879A;
+  --shadow-card:0 8px 24px rgba(23,35,51,.10);
+  --shadow-lg:0 16px 40px rgba(23,35,51,.15);
+}
+:root[data-accent="purple"]{--cyan:#8B72D8;--cyan-dim:rgba(139,114,216,.14);}
+:root[data-accent="amber"]{--cyan:#E3A83B;--cyan-dim:rgba(227,168,59,.14);}
+:root[data-accent="green"]{--cyan:#38B96B;--cyan-dim:rgba(56,185,107,.14);}
+:root[data-font="S"] body{font-size:13px;}
+:root[data-font="M"] body{font-size:15px;}
+:root[data-font="L"] body{font-size:17px;}
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0;}
+body{background:var(--navy); color:var(--ivory); font-family:'Manrope',-apple-system,BlinkMacSystemFont,sans-serif; font-size:15px; line-height:1.45; -webkit-font-smoothing:antialiased; min-height:100vh; overscroll-behavior:none;}
+button,input{font-family:inherit; color:inherit;}
+button{cursor:pointer; border:none; background:none;}
+.mono{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums; letter-spacing:.02em;}
+
+.app-shell{max-width:440px; margin:0 auto; min-height:100vh; position:relative; background:var(--navy); border-left:1px solid var(--border-soft); border-right:1px solid var(--border-soft); padding-bottom:64px;}
+.screen{display:none;}
+.screen.active{display:block;}
+
+.screen-header{position:sticky; top:0; z-index:20; background:rgba(7,18,31,.94); backdrop-filter:blur(10px); border-bottom:1px solid var(--border-soft); padding:14px var(--sp-5) 12px;}
+.header-row{display:flex; align-items:center; gap:var(--sp-3);}
+.header-title{font-family:'Fraunces',serif; font-size:20px; font-weight:600; color:var(--ivory); flex:1;}
+.back-btn,.icon-btn{width:38px; height:38px; border-radius:var(--r-sm); background:var(--navy-2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--ivory); flex-shrink:0;}
+.icon{width:20px;height:20px;} .icon-sm{width:15px;height:15px;}
+
+.segmented{display:flex; background:var(--navy-3); border:1px solid var(--border); border-radius:var(--r-sm); padding:3px; gap:3px; margin-top:12px;}
+.segmented-btn{flex:1; text-align:center; padding:9px 6px; border-radius:8px; font-size:13px; font-weight:700; color:var(--slate);}
+.segmented-btn.active{background:var(--cyan-dim); color:var(--cyan);}
+
+.search-wrap{display:flex; align-items:center; gap:10px; background:var(--navy-3); border:1px solid var(--border); border-radius:var(--r-sm); padding:11px 14px; margin-top:10px;}
+.search-wrap .icon{color:var(--slate-dim); flex-shrink:0;}
+.input{flex:1; width:100%; background:transparent; border:none; outline:none; font-size:14.5px; color:var(--ivory);}
+.input::placeholder{color:var(--slate-dim);}
+
+.screen-body{padding:16px var(--sp-5) 8px;}
+
+.empty-state{text-align:center; padding:34px 20px; color:var(--slate); font-size:13px;}
+.empty-state .icon{color:var(--slate-dim); width:30px; height:30px; margin-bottom:10px;}
+.permission-banner{display:flex; align-items:center; gap:12px; background:var(--amber-dim); border:1px solid rgba(227,168,59,.35); border-radius:var(--r-md); padding:14px; margin-bottom:14px;}
+.permission-banner .icon{color:var(--amber); flex-shrink:0;}
+.permission-banner-text{flex:1; font-size:12.5px; color:var(--ivory);}
+.permission-banner-btn{font-size:11.5px; font-weight:800; letter-spacing:.03em; color:var(--amber); background:var(--navy-2); border:1px solid rgba(227,168,59,.4); border-radius:20px; padding:8px 12px; flex-shrink:0;}
+
+.avatar{width:44px; height:44px; border-radius:12px; background:var(--navy-3); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:var(--cyan); flex-shrink:0;}
+
+.call-row,.contact-row{display:flex; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid var(--border-soft);}
+.call-row:last-child,.contact-row:last-child{border-bottom:none;}
+.call-dir{width:16px; height:16px; flex-shrink:0; color:var(--slate-dim);}
+.call-dir.missed{color:var(--red);}
+.call-dir.out{transform:rotate(-45deg);}
+.call-dir.in{transform:rotate(135deg);}
+.call-info,.contact-info{flex:1; min-width:0;}
+.call-name,.contact-name{font-size:14.5px; font-weight:700; color:var(--ivory); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.call-name.missed{color:var(--red);}
+.call-sub,.contact-sub{font-size:12px; color:var(--slate); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.call-time{font-size:11.5px; color:var(--slate-dim); flex-shrink:0; text-align:right; margin-right:2px;}
+.row-call-btn{width:36px; height:36px; border-radius:50%; background:var(--green-dim); border:1px solid rgba(56,185,107,.35); color:var(--green); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.row-call-btn .icon-sm{width:16px;height:16px;}
+
+.bottom-nav{position:fixed; left:0; right:0; bottom:0; z-index:30; background:rgba(7,18,31,.96); backdrop-filter:blur(10px); border-top:1px solid var(--border-soft);}
+.bottom-nav-inner{max-width:440px; margin:0 auto; display:flex;}
+.bottom-nav-btn{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:9px 4px 10px; color:var(--slate-dim); font-size:10.5px; font-weight:700; letter-spacing:.03em;}
+.bottom-nav-btn.active{color:var(--cyan);}
+.bottom-nav-btn .icon{width:21px;height:21px;}
+
+.dialpad-dock{position:fixed; left:0; right:0; bottom:64px; z-index:29; background:rgba(10,22,36,.97); backdrop-filter:blur(10px); border-top:1px solid var(--border-soft); box-shadow:0 -8px 24px rgba(2,7,14,.35); transition:padding .18s ease;}
+.dialpad-dock-inner{max-width:440px; margin:0 auto; padding:6px 20px 14px;}
+.dial-handle{width:36px; height:4px; border-radius:3px; background:var(--border); margin:6px auto 8px; }
+.dial-display-row{display:flex; align-items:center; gap:8px; padding:2px 2px 10px;}
+.dial-display{flex:1; width:100%; background:transparent; border:none; outline:none; font-size:22px; font-weight:600; color:var(--ivory); min-width:0;}
+.dial-display::placeholder{color:var(--slate-dim); font-size:15px; font-weight:500;}
+.call-status-line{font-size:12px; color:var(--cyan); padding:0 2px 8px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
+.call-status-line .sub{color:var(--slate-dim); font-size:10.5px;}
+.dialpad-dock.collapsed .dial-keys,.dialpad-dock.collapsed .call-fab-row{display:none;}
+.dial-keys{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px;}
+.dial-key{aspect-ratio:1; border-radius:50%; background:var(--navy-3); border:1px solid var(--border); display:flex; flex-direction:column; align-items:center; justify-content:center; -webkit-user-select:none; user-select:none;}
+.dial-key:active{background:var(--navy-4);}
+.dial-key-digit{font-size:21px; font-weight:700; color:var(--ivory); font-family:'IBM Plex Mono',monospace;}
+.dial-key-sub{font-size:9px; letter-spacing:.08em; color:var(--slate-dim); margin-top:1px;}
+.call-fab-row{display:flex; justify-content:center;}
+.call-fab{width:58px; height:58px; border-radius:50%; background:var(--green); color:#052436; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 26px rgba(56,185,107,.35);}
+.call-fab .icon{width:25px;height:25px;}
+.dial-collapse-btn{position:absolute; top:2px; right:14px; color:var(--slate-dim); width:28px; height:28px; display:flex; align-items:center; justify-content:center;}
+
+.modal-overlay{display:none; position:fixed; inset:0; z-index:50; background:rgba(3,9,16,.6); align-items:flex-end; justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-sheet{width:100%; max-width:440px; background:var(--navy-2); border:1px solid var(--border); border-top-left-radius:22px; border-top-right-radius:22px; padding:10px var(--sp-5) 26px; max-height:70vh; overflow-y:auto;}
+.modal-handle{width:36px; height:4px; border-radius:3px; background:var(--border); margin:2px auto 14px;}
+.modal-title-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+.modal-title{font-family:'Fraunces',serif; font-size:17px; font-weight:600;}
+.sim-row{display:flex; align-items:center; gap:12px; padding:13px 8px; border-radius:var(--r-md); border:1px solid var(--border); margin-bottom:10px; background:var(--navy-3);}
+.sim-row-label{flex:1; font-size:14px; font-weight:700;}
+.menu-item{display:flex; align-items:center; gap:12px; padding:14px 6px; border-bottom:1px solid var(--border-soft); font-size:14px; font-weight:600; width:100%; text-align:left;}
+.menu-item:last-child{border-bottom:none;}
+.menu-item .icon{color:var(--slate);}
+
+.toast{position:fixed; left:50%; bottom:150px; transform:translateX(-50%) translateY(10px); z-index:60; background:var(--navy-4); border:1px solid var(--border); color:var(--ivory); font-size:13px; font-weight:600; padding:11px 18px; border-radius:30px; box-shadow:var(--shadow-lg); opacity:0; transition:all .25s ease; max-width:86%; text-align:center; pointer-events:none;}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<svg style="display:none">
+<defs>
+<symbol id="i-chevron-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 8 12 15 19"/></symbol>
+<symbol id="i-chevron-d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 12 16 19 9"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="15.3" y1="15.3" x2="20.5" y2="20.5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.36 11.36 0 003.57.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.36 11.36 0 00.57 3.57 1 1 0 01-.25 1.02l-2.2 2.2z"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.3"/><path d="M2.7 19.5c0-3.6 2.8-6.3 6.3-6.3s6.3 2.7 6.3 6.3"/><circle cx="17" cy="8.5" r="2.6"/><path d="M15.5 13.2c2.9.3 5 2.7 5 6.3"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></symbol>
+<symbol id="i-backspace" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5h11a1 1 0 011 1v12a1 1 0 01-1 1H8l-6-7z"/><line x1="12.5" y1="9.5" x2="17.5" y2="14.5"/><line x1="17.5" y1="9.5" x2="12.5" y2="14.5"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 3 22 20 2 20"/><line x1="12" y1="9" x2="12" y2="14.5"/><circle cx="12" cy="17.3" r="1" fill="currentColor" stroke="none"/></symbol>
+</defs>
+</svg>
+
+<div class="app-shell">
+
+  <!-- ============ CALLS ============ -->
+  <div class="screen active" id="screen-calls-main">
+    <div class="screen-header">
+      <div class="header-row">
+        <button class="back-btn" onclick="goBack()" aria-label="Back"><svg class="icon"><use href="#i-chevron-l"/></svg></button>
+        <div class="header-title">Calls</div>
+        <button class="icon-btn" onclick="toggleSearch('calls')" aria-label="Search"><svg class="icon"><use href="#i-search"/></svg></button>
+        <button class="icon-btn" onclick="openModal('modal-more-menu')" aria-label="More"><svg class="icon"><use href="#i-more"/></svg></button>
+      </div>
+      <div class="segmented">
+        <button class="segmented-btn active" onclick="setCallFilter('all', this)">All</button>
+        <button class="segmented-btn" onclick="setCallFilter('missed', this)">Missed</button>
+      </div>
+      <div class="search-wrap" id="calls-search-wrap" style="display:none">
+        <svg class="icon icon-sm"><use href="#i-search"/></svg>
+        <input class="input" id="calls-search" placeholder="Search recent calls" oninput="renderRecentCalls()">
+      </div>
+    </div>
+    <div class="screen-body" style="padding-bottom:320px" id="calls-body">
+      <div id="calls-permission-banner"></div>
+      <div id="recent-calls-list"></div>
+    </div>
+  </div>
+
+  <!-- ============ CONTACTS ============ -->
+  <div class="screen" id="screen-contacts-main">
+    <div class="screen-header">
+      <div class="header-row">
+        <button class="back-btn" onclick="goBack()" aria-label="Back"><svg class="icon"><use href="#i-chevron-l"/></svg></button>
+        <div class="header-title">Contacts</div>
+      </div>
+      <div class="search-wrap">
+        <svg class="icon icon-sm"><use href="#i-search"/></svg>
+        <input class="input" id="contacts-search" placeholder="Search contacts" oninput="renderPhoneContacts()">
+      </div>
+    </div>
+    <div class="screen-body" style="padding-bottom:24px">
+      <div id="contacts-permission-banner"></div>
+      <div id="phone-contacts-list"></div>
+    </div>
+  </div>
+
+  <!-- Persistent dial pad (Calls tab only) -->
+  <div class="dialpad-dock" id="dialpad-dock">
+    <div class="dialpad-dock-inner" style="position:relative">
+      <button class="dial-collapse-btn" onclick="toggleDialpadCollapsed()" aria-label="Collapse"><svg class="icon icon-sm" id="dial-collapse-icon"><use href="#i-chevron-d"/></svg></button>
+      <div class="dial-handle"></div>
+      <div class="dial-display-row">
+        <input class="dial-display mono" id="dial-number" placeholder="Enter number" inputmode="tel" type="tel">
+        <button class="icon-btn" onclick="dialBackspace()" aria-label="Backspace"><svg class="icon icon-sm"><use href="#i-backspace"/></svg></button>
+      </div>
+      <div class="call-status-line" id="call-status-line" style="display:none">
+        <span id="call-status-text">Calling…</span>
+        <span class="sub" id="call-status-sub"></span>
+      </div>
+      <div class="dial-keys" id="dial-keys"></div>
+      <div class="call-fab-row">
+        <button class="call-fab" onclick="startCall()" aria-label="Call"><svg class="icon"><use href="#i-phone"/></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button class="bottom-nav-btn active" id="bn-calls" onclick="switchTab('calls')"><svg class="icon"><use href="#i-phone"/></svg>Calls</button>
+      <button class="bottom-nav-btn" id="bn-contacts" onclick="switchTab('contacts')"><svg class="icon"><use href="#i-users"/></svg>Contacts</button>
+    </div>
+  </div>
+
+  <!-- SIM picker -->
+  <div class="modal-overlay" id="modal-sim-picker" onclick="if(event.target===this) closeModal('modal-sim-picker')">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title-row"><div class="modal-title">Call using</div><button class="icon-btn" onclick="closeModal('modal-sim-picker')" aria-label="Close"><svg class="icon icon-sm"><use href="#i-x"/></svg></button></div>
+      <div id="sim-picker-list"></div>
+    </div>
+  </div>
+
+  <!-- More menu -->
+  <div class="modal-overlay" id="modal-more-menu" onclick="if(event.target===this) closeModal('modal-more-menu')">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <button class="menu-item" onclick="closeModal('modal-more-menu'); refreshAll(); toast('Refreshed');"><svg class="icon"><use href="#i-search"/></svg>Refresh</button>
+      <button class="menu-item" onclick="closeModal('modal-more-menu'); NativeBridge.requestPhonePermissions();"><svg class="icon"><use href="#i-alert"/></svg>Review permissions</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+var activeTab='calls';
+var callFilter='all';
+var recentCalls=[];
+var phoneContacts=[];
+var simAccounts=[];
+var permissions={callLog:false,contacts:false,callPhone:false};
+var pendingSimNumber='';
+var pendingSimName='';
+var toastTimer=null;
+var dialpadCollapsed=false;
+var callInProgress=false;
+var callStartedAt=0;
+var offhookStartedAt=0;
+var durationTimer=null;
+
+function hasNativeBridge(){return typeof window.NativeBridge!=='undefined';}
+function safeJson(text,fallback){try{return JSON.parse(text);}catch(e){return fallback;}}
+function esc(s){return String(s==null?'':s).replace(/[&<>'"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];});}
+function jsAttr(s){var v=String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");return v.replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
+function toast(msg){var t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show');},2200);}
+
+function goBack(){if(hasNativeBridge())NativeBridge.goBack();}
+
+function init(){
+  buildDialKeys();
+  if(hasNativeBridge()){
+    applyAppearance(safeJson(NativeBridge.getAppearanceJson(),{}));
+    syncFromNative();
+  }
+  document.getElementById('dial-number').addEventListener('input',onDialInput);
+  wireLongPressPlus();
+}
+
+function applyAppearance(a){
+  document.documentElement.dataset.theme=a.theme||'dark';
+  document.documentElement.dataset.accent=a.accent||'cyan';
+  document.documentElement.dataset.font=a.fontSize||'M';
+}
+
+function syncFromNative(){
+  if(!hasNativeBridge())return;
+  try{
+    permissions=safeJson(NativeBridge.getPermissionStateJson(),{callLog:false,contacts:false,callPhone:false});
+    simAccounts=safeJson(NativeBridge.getSimAccountsJson(),[]);
+    recentCalls=safeJson(NativeBridge.getRecentCallsJson(callFilter),[]);
+    phoneContacts=safeJson(NativeBridge.getContactsJson(),[]);
+    renderRecentCalls();
+    renderPhoneContacts();
+  }catch(e){toast('Sync failed');}
+}
+
+function refreshAll(){syncFromNative();}
+
+function switchTab(tab){
+  activeTab=tab;
+  document.getElementById('screen-calls-main').classList.toggle('active',tab==='calls');
+  document.getElementById('screen-contacts-main').classList.toggle('active',tab==='contacts');
+  document.getElementById('bn-calls').classList.toggle('active',tab==='calls');
+  document.getElementById('bn-contacts').classList.toggle('active',tab==='contacts');
+  document.getElementById('dialpad-dock').style.display=(tab==='calls')?'block':'none';
+}
+
+function toggleSearch(which){
+  var wrap=document.getElementById('calls-search-wrap');
+  var show=wrap.style.display==='none';
+  wrap.style.display=show?'flex':'none';
+  if(!show){document.getElementById('calls-search').value='';renderRecentCalls();}
+}
+
+function setCallFilter(f,btn){
+  callFilter=f;
+  document.querySelectorAll('#screen-calls-main .segmented-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  if(hasNativeBridge()){
+    recentCalls=safeJson(NativeBridge.getRecentCallsJson(f),[]);
+  }
+  renderRecentCalls();
+}
+
+function fmtWhen(ms){
+  if(!ms)return '';
+  var d=new Date(Number(ms));
+  var now=new Date();
+  var sameDay=d.toDateString()===now.toDateString();
+  var hh=d.getHours(); var mm=('0'+d.getMinutes()).slice(-2); var ap=hh>=12?'PM':'AM'; var h12=hh%12; if(h12===0)h12=12;
+  var time=h12+':'+mm+' '+ap;
+  if(sameDay)return time;
+  var yest=new Date(now); yest.setDate(now.getDate()-1);
+  if(d.toDateString()===yest.toDateString())return 'Yesterday · '+time;
+  return (d.getMonth()+1)+'/'+d.getDate()+' · '+time;
+}
+
+function directionMeta(dir){
+  if(dir==='missed'||dir==='rejected')return {icon:'i-chevron-l',cls:'call-dir missed in',label:'Missed'};
+  if(dir==='incoming')return {icon:'i-chevron-l',cls:'call-dir in',label:'Incoming'};
+  if(dir==='outgoing')return {icon:'i-chevron-l',cls:'call-dir out',label:'Outgoing'};
+  return {icon:'i-chevron-l',cls:'call-dir',label:'Call'};
+}
+
+function renderRecentCalls(){
+  var wrap=document.getElementById('recent-calls-list');
+  var banner=document.getElementById('calls-permission-banner');
+  if(!permissions.callLog){
+    banner.innerHTML=permissionBannerHtml('Allow Call Log access to see recent calls.','requestPhonePermissionsFromJs()');
+    wrap.innerHTML='';
+    return;
+  }
+  banner.innerHTML='';
+  var q=(document.getElementById('calls-search')?document.getElementById('calls-search').value:'').toLowerCase();
+  var rows=recentCalls.filter(function(c){
+    if(!q)return true;
+    return (c.name||'').toLowerCase().indexOf(q)>-1||(c.number||'').indexOf(q)>-1;
+  });
+  if(!rows.length){
+    wrap.innerHTML='<div class="empty-state"><svg class="icon"><use href="#i-phone"/></svg><div>No recent calls</div></div>';
+    return;
+  }
+  wrap.innerHTML=rows.map(function(c){
+    var meta=directionMeta(c.direction);
+    var name=c.name||c.number;
+    var missed=(c.direction==='missed'||c.direction==='rejected');
+    return '<div class="call-row">'+
+      '<svg class="'+meta.cls+'"><use href="#'+meta.icon+'"/></svg>'+
+      '<div class="call-info">'+
+        '<div class="call-name'+(missed?' missed':'')+'">'+esc(name)+'</div>'+
+        '<div class="call-sub">'+esc(meta.label)+' &middot; '+esc(c.number)+'</div>'+
+      '</div>'+
+      '<div class="call-time">'+esc(fmtWhen(c.time))+'</div>'+
+      '<button class="row-call-btn" onclick="callNumber(\''+jsAttr(c.number)+'\',\''+jsAttr(name)+'\')" aria-label="Call"><svg class="icon-sm"><use href="#i-phone"/></svg></button>'+
+    '</div>';
+  }).join('');
+}
+
+function renderPhoneContacts(){
+  var wrap=document.getElementById('phone-contacts-list');
+  var banner=document.getElementById('contacts-permission-banner');
+  if(!permissions.contacts){
+    banner.innerHTML=permissionBannerHtml('Allow Contacts access to search your contacts here.','requestPhonePermissionsFromJs()');
+    wrap.innerHTML='';
+    return;
+  }
+  banner.innerHTML='';
+  var q=(document.getElementById('contacts-search').value||'').toLowerCase();
+  var rows=phoneContacts.filter(function(c){return (c.name||'').toLowerCase().indexOf(q)>-1||(c.number||'').indexOf(q)>-1;});
+  if(!rows.length){
+    wrap.innerHTML='<div class="empty-state"><svg class="icon"><use href="#i-users"/></svg><div>No contacts found</div></div>';
+    return;
+  }
+  wrap.innerHTML=rows.map(function(c){
+    return '<div class="contact-row">'+
+      '<div class="avatar">'+esc(c.initials||'?')+'</div>'+
+      '<div class="contact-info"><div class="contact-name">'+esc(c.name)+'</div><div class="contact-sub">'+esc(c.number)+'</div></div>'+
+      '<button class="row-call-btn" onclick="callNumber(\''+jsAttr(c.number)+'\',\''+jsAttr(c.name)+'\')" aria-label="Call"><svg class="icon-sm"><use href="#i-phone"/></svg></button>'+
+    '</div>';
+  }).join('');
+}
+
+function permissionBannerHtml(text,onclickFn){
+  return '<div class="permission-banner"><svg class="icon"><use href="#i-alert"/></svg><div class="permission-banner-text">'+esc(text)+'</div><button class="permission-banner-btn" onclick="'+onclickFn+'">GRANT</button></div>';
+}
+
+function requestPhonePermissionsFromJs(){
+  if(hasNativeBridge())NativeBridge.requestPhonePermissions();
+}
+
+/* ---------- Dial pad ---------- */
+function buildDialKeys(){
+  var layout=[['1',''],['2','ABC'],['3','DEF'],['4','GHI'],['5','JKL'],['6','MNO'],['7','PQRS'],['8','TUV'],['9','WXYZ'],['*',''],['0','+'],['#','']];
+  var wrap=document.getElementById('dial-keys');
+  wrap.innerHTML=layout.map(function(k){
+    return '<button class="dial-key" data-digit="'+k[0]+'" onclick="dialPress(\''+k[0]+'\')"><span class="dial-key-digit">'+k[0]+'</span>'+(k[1]?'<span class="dial-key-sub">'+k[1]+'</span>':'')+'</button>';
+  }).join('');
+}
+
+function dialPress(d){
+  var el=document.getElementById('dial-number');
+  el.value=(el.value||'')+d;
+  onDialInput();
+}
+
+function dialBackspace(){
+  var el=document.getElementById('dial-number');
+  el.value=(el.value||'').slice(0,-1);
+  onDialInput();
+}
+
+function onDialInput(){ /* reserved for live validation/formatting hooks */ }
+
+function wireLongPressPlus(){
+  var zeroBtn=null;
+  document.querySelectorAll('#dial-keys .dial-key').forEach(function(b){
+    if(b.getAttribute('data-digit')==='0')zeroBtn=b;
+  });
+  if(!zeroBtn)return;
+  var timer=null, longPressed=false;
+  var start=function(ev){
+    longPressed=false;
+    timer=setTimeout(function(){
+      longPressed=true;
+      var el=document.getElementById('dial-number');
+      el.value=(el.value||'')+'+';
+      onDialInput();
+    },450);
+  };
+  var cancel=function(){clearTimeout(timer);};
+  zeroBtn.addEventListener('touchstart',start,{passive:true});
+  zeroBtn.addEventListener('touchend',cancel);
+  zeroBtn.addEventListener('touchcancel',cancel);
+  zeroBtn.addEventListener('mousedown',start);
+  zeroBtn.addEventListener('mouseup',cancel);
+  zeroBtn.addEventListener('mouseleave',cancel);
+  zeroBtn.addEventListener('click',function(ev){
+    if(longPressed){ev.stopImmediatePropagation();ev.preventDefault();}
+  },true);
+}
+
+function toggleDialpadCollapsed(){
+  dialpadCollapsed=!dialpadCollapsed;
+  document.getElementById('dialpad-dock').classList.toggle('collapsed',dialpadCollapsed);
+  document.getElementById('dial-collapse-icon').style.transform=dialpadCollapsed?'rotate(180deg)':'rotate(0deg)';
+}
+
+/* ---------- Calling ---------- */
+function startCall(){
+  var num=(document.getElementById('dial-number').value||'').trim();
+  if(!num){toast('Enter a number first');return;}
+  callNumber(num,'');
+}
+
+function callNumber(number,name){
+  number=(number||'').trim();
+  if(!number){toast('No number to call');return;}
+  if(!hasNativeBridge()){toast('Calling requires the Android app');return;}
+  if(simAccounts&&simAccounts.length>=2){
+    pendingSimNumber=number; pendingSimName=name;
+    renderSimPicker();
+    openModal('modal-sim-picker');
+    return;
+  }
+  dispatchCall(number,name,'','');
+}
+
+function renderSimPicker(){
+  var wrap=document.getElementById('sim-picker-list');
+  wrap.innerHTML=simAccounts.map(function(s){
+    return '<button class="sim-row" style="width:100%" onclick="chooseSim(\''+jsAttr(s.component)+'\',\''+jsAttr(s.handleId)+'\')"><span class="sim-row-label">'+esc(s.label)+'</span><svg class="icon"><use href="#i-phone"/></svg></button>';
+  }).join('');
+}
+
+function chooseSim(component,id){
+  closeModal('modal-sim-picker');
+  dispatchCall(pendingSimNumber,pendingSimName,component,id);
+}
+
+function dispatchCall(number,name,component,id){
+  var r=safeJson(NativeBridge.placeCall(number,component||'',id||''),null);
+  if(!r||!r.ok){
+    toast((r&&r.message)||'Unable to place call');
+    if(r&&r.code==='CALL_PERMISSION_MISSING')requestPhonePermissionsFromJs();
+    return;
+  }
+  document.getElementById('dial-number').value=number;
+  callInProgress=true;
+  offhookStartedAt=0;
+  showCallStatus('Calling '+(name||number)+'…','');
+}
+
+function showCallStatus(text,sub){
+  var line=document.getElementById('call-status-line');
+  line.style.display='flex';
+  document.getElementById('call-status-text').textContent=text;
+  document.getElementById('call-status-sub').textContent=sub||'';
+}
+
+function hideCallStatusSoon(){
+  setTimeout(function(){
+    if(!callInProgress)document.getElementById('call-status-line').style.display='none';
+  },2500);
+}
+
+function syncCallState(state){
+  if(!callInProgress)return;
+  if(state==='OFFHOOK'){
+    if(!offhookStartedAt){offhookStartedAt=Date.now();startDurationTicker();}
+    showCallStatus('In call','Managed from your phone\u2019s call screen');
+  }else if(state==='RINGING'){
+    showCallStatus('Ringing…','');
+  }else if(state==='IDLE'){
+    stopDurationTicker();
+    showCallStatus('Call ended','');
+    callInProgress=false;
+    hideCallStatusSoon();
+  }else{
+    showCallStatus('Status unavailable','Call state permission not granted');
+  }
+}
+
+function startDurationTicker(){
+  stopDurationTicker();
+  durationTimer=setInterval(function(){
+    if(!offhookStartedAt)return;
+    var secs=Math.floor((Date.now()-offhookStartedAt)/1000);
+    var m=Math.floor(secs/60), s=secs%60;
+    document.getElementById('call-status-sub').textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+  },1000);
+}
+function stopDurationTicker(){clearInterval(durationTimer);durationTimer=null;}
+
+/* ---------- Modals ---------- */
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
