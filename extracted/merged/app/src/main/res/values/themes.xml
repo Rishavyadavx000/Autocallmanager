@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="Theme.AutoCallManager" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="android:fontFamily">sans</item>
-        <item name="android:colorAccent">@color/v6_cyan</item>
-        <item name="android:navigationBarColor">@color/v6_background</item>
-        <item name="android:statusBarColor">@color/v6_background</item>
-    </style>
-</resources>
